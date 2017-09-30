@@ -1,0 +1,6 @@
+﻿VERSION BUILD=8970419 RECORDER=FX
+TAB T=1
+TAB CLOSEALLOTHERS
+URL GOTO=http://sapiensweb.fiat.com/crfroc?~transaction=ZRCA_ORE&sap-language=IT
+FRAME NAME="itsframe1_20170720115613.4775160"
+TAG POS=7 TYPE=DIV ATTR=TXT:Periodo<SP>di<SP>ConsuntivazioneSettimana<SP>dalSettimana*

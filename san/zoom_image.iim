@@ -1,0 +1,5 @@
+﻿
+TAG POS=1 TYPE=IMG ATTR=SRC:http://www.antenati.san.beniculturali.it/gallery2/main.php?g2_view=core.DownloadItem&g2_itemId=*&g2_serialNumber=2
+TAG POS=2 TYPE=IMG ATTR=SRC:http://www.antenati.san.beniculturali.it/gallery2/main.php?g2_view=core.DownloadItem&g2_itemId=* CONTENT=EVENT:SAVEITEM 
+WAIT SECONDS=1
+TAG POS=1 TYPE=DIV ATTR=ID:zoom_close&&TXT:

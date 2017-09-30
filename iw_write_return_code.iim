@@ -1,0 +1,11 @@
+﻿' input:
+' RETURN_CODE: return code to be written
+' RETURN_MSG: last error msg if any
+SET !EXTRACT {{TIMESTAMP}}
+ADD !EXTRACT {{RETURN_CODE}}
+ADD !EXTRACT {{RETURN_MSG}}
+'PROMPT {{!EXTRACT}}
+SAVEAS TYPE=EXTRACT FOLDER=* FILE={{DEST_FILENAME}}
+
+' remove lock
+FILEDELETE NAME={{CMD_FILENAME}}

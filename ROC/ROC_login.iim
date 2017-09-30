@@ -1,0 +1,11 @@
+﻿
+'URL GOTO=https://peoplenetwork.fcagroup.com/it/Pages/Homepage.aspx
+'TAG POS=1 TYPE=A ATTR=TXT:Roc<SP>-<SP>CRF<SP>Consuntivazione<SP>ore
+
+URL GOTO=https://www.time.fiatservices.it/jsipert2/JSipert2AD
+URL GOTO=http://sapiensweb.fiat.com/crfroc?~transaction=ZRCA_ORE&sap-language=IT
+SET !ENCRYPTION NO
+SET !TIMEOUT_STEP 1
+TAG POS=1 TYPE=INPUT:TEXT FORM=NAME:loginForm ATTR=ID:sap-user CONTENT={{USERNAME}}
+TAG POS=1 TYPE=INPUT:PASSWORD FORM=NAME:loginForm ATTR=ID:sap-password CONTENT={{PASSWORD}}
+TAG POS=1 TYPE=SPAN ATTR=TXT:Logon

@@ -1,0 +1,15 @@
+﻿
+' set cw as read-write
+FRAME NAME="itsframe1_2*"
+TAG POS=2 TYPE=SPAN ATTR=TXT:Annulla
+TAG POS=1 TYPE=SPAN ATTR=TXT:Selezione<SP>CID<SP>per<SP>Consuntivazione<SP>Ore
+' return to cw status window
+TAG POS=2 TYPE=SPAN ATTR=TXT:Continua
+
+' save page as htm
+SET {{!EXTRACT}} =
+'FRAME NAME="itsframe1_2*"
+SET !EXTRACT_TEST_POPUP NO
+TAG POS=1 TYPE=DIV ATTR=TXT:Consuntivazione<SP>per<SP>Impiegati<SP>Settimana<SP>dal<SP>* EXTRACT=HTM
+FILEDELETE NAME=OreROC.txt
+SAVEAS TYPE=EXTRACT FOLDER=* FILE=OreROC.txt

@@ -1,0 +1,16 @@
+﻿' input:
+' FILENAME: name of file containing commands (eg. "SET FILENAME /home/ceres/iMacros/Downloads/command.csv")
+
+CMDLINE !DATASOURCE {{FILENAME}}
+'Number of columns in the CSV file. This must be accurate!
+SET !DATASOURCE_COLUMNS 2
+'Start at line 2 to skip the header in the file each loop 
+SET !DATASOURCE_LINE 2
+
+SET ACTION {{!COL1}}
+SET PARAMS {{!COL2}}
+
+ADD !EXTRACT {{ACTION}}
+ADD !EXTRACT {{PARAMS}}
+
+'PROMPT {{!EXTRACT}}
