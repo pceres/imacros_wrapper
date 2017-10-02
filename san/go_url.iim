@@ -1,5 +1,5 @@
 ﻿
 ' input:
-'SET URhttp://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/Matrimoni+memorandum+notificazioni+ed+opposizioni/1825/986/
+'SET URL http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/Matrimoni+memorandum+notificazioni+ed+opposizioni/1825/986/
 
 URL GOTO={{URL}}

@@ -46,7 +46,7 @@ flg_dnld = 1; % 0 --> just list, disable download
 
 str = extract_params(params,{'url_town','folder_root','folder_town','tag_town'});
 url_town    = str.url_town;     % url
-folder_root = str.folder_root;  % folder root where folder_town will be created
+folder_root = ensure_filesep_ending(str.folder_root);  % folder root where folder_town will be created
 folder_town = str.folder_town;  % folder prefix for downloaded images
 tag_town    = str.tag_town;     % title of the page
 
@@ -59,7 +59,8 @@ if (result0.err_code ~= 0)
     err_msg  = 'problems with iMacros_wrapper';
 else
     % get typology info (available years, etc.)
-    result0 = detect_webfolder_info(url_town,tag_town,webfolder_folder,'info_town.mat');
+    info_town_matfile = san_get_config('info_town');
+    result0 = detect_webfolder_info(url_town,tag_town,webfolder_folder,info_town_matfile);
     if (result0.err_code ~= 0)
         err_code = 3;
         err_msg  = sprintf('Error accessing url for tipology %s: %s',tag_town,url_town);
@@ -125,7 +126,7 @@ flg_dnld = 1; % 0 --> just list, disable download
 
 str = extract_params(params,{'url_typology','folder_root','folder_typology','tag_typology'});
 url_typology    = str.url_typology;     % url
-folder_root     = str.folder_root;      % folder root where folder_typology will be created
+folder_root     = ensure_filesep_ending(str.folder_root);      % folder root where folder_typology will be created
 folder_typology = str.folder_typology;  % folder prefix for downloaded images
 tag_typology    = str.tag_typology;     % title of the page
 
@@ -138,7 +139,8 @@ if (result0.err_code ~= 0)
     err_msg  = 'problems with iMacros_wrapper';
 else
     % get typology info (available years, etc.)
-    result0 = detect_webfolder_info(url_typology,tag_typology,webfolder_folder,'info_typology.mat');
+    info_typology_matfile = san_get_config('info_typology');
+    result0 = detect_webfolder_info(url_typology,tag_typology,webfolder_folder,info_typology_matfile);
     if (result0.err_code ~= 0)
         err_code = 3;
         err_msg  = sprintf('Error accessing url for tipology %s: %s',tag_typology,url_typology);
@@ -215,7 +217,7 @@ special_string = '$££$';
 
 str = extract_params(params,{'url_batch','folder_root','folder_batch','tag_batch'});
 url_batch    = str.url_batch;   % url of the batch to be downloaded
-folder_root  = str.folder_root; % root folder where folder_batch will be created
+folder_root  = ensure_filesep_ending(str.folder_root); % root folder where folder_batch will be created
 folder_batch = str.folder_batch;% folder containing downloaded images
 tag_batch    = str.tag_batch;   % tag of the web page to be checked before proceeding with download
 
@@ -233,14 +235,14 @@ else
         %num_img              = result0.num_img;
         num_figures          = result0.num_figures;
         %url_img_template     = result0.url_img_template;
-        batch_folder         = result0.batch_folder;
+        batch_folder         = ensure_filesep_ending(result0.batch_folder);
         matr_img_to_dnld_ref = result0.matr_img; % matrix with list of all images in batch (numeric id in col1, url in col2)
 
         % detect images to be downloaded
-        matr_img_to_dnld = detect_images_to_download(batch_folder,matr_img_to_dnld_ref);
+        [matr_img_to_dnld list_stored] = detect_images_to_download(batch_folder,matr_img_to_dnld_ref); %#ok<NASGU> list_stored s overwritten by download_batch_loop
         
         % loop to download images in the batch
-        [list_stored list_stored_filename list_dummy_filename] = download_batch_loop(matr_img_to_dnld,matr_img_to_dnld_ref,batch_folder,num_figures);
+        [list_stored list_stored_filename list_dummy_filename list_multiple] = download_batch_loop(matr_img_to_dnld,matr_img_to_dnld_ref,batch_folder,num_figures);
         matr_stored = list_to_matr(matr_img_to_dnld_ref,list_stored);
         
         fprintf(1,'Batch %s was downloaded.\n',folder_batch);
@@ -251,6 +253,7 @@ else
         result_batch.matr_stored  = matr_stored;      % matr of downloaded images (col1: numeric id as shown in batch page, col2: url)
         result_batch.list_stored_filename = list_stored_filename;   % filenames of downloaded images
         result_batch.list_dummy_filename = list_dummy_filename;     % filenames of missing images (not available in website)
+        result_batch.list_multiple = list_multiple;   % multiple images in the batch (after repeated attempts to remove them)
     end
 end
 
@@ -295,7 +298,7 @@ err_code = 0;
 err_msg  = '';
 
 info_fullname = [webfolder_folder info_matfile];
-[webfolder_info matr_items] = load_webfolder_info(info_fullname,tag_webfolder);
+[temp matr_items] = load_webfolder_info(info_fullname,tag_webfolder); %#ok<ASGLU>
 
 if ( isempty(matr_items) )
     result0 = open_batch_page('go_image',url_webfolder,tag_webfolder,tag_webfolder,{});
@@ -350,7 +353,7 @@ for i_year = 1:size(matr_years,1)
             msg='*** ';
             ks_year='???';
         else
-            [tmp, ks_year] = fileparts(str.batch_folder(1:end-1));
+            [temp, ks_year] = fileparts(str.batch_folder(1:end-1)); %#ok<ASGLU>
             if ~isempty(str.list_dummy_filename)
                 msg='!!! ';
             else
@@ -428,7 +431,7 @@ err_code = 0;
 err_msg  = '';
 matr_img = {};
 
-info_matfile = 'info.mat';
+info_matfile = san_get_config('info_batch');
 
 batch_folder = [folder_root folder_batch filesep];
 create_folder_if_needed(folder_root);
@@ -610,20 +613,22 @@ result.matr_img = matr_img; % each row has format {img_id, img_url}, with img_id
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [list_stored list_stored_filename list_dummy_filename] = download_batch_loop(matr_img_to_dnld,matr_img_to_dnld_ref,batch_folder,num_figures)
+function [list_stored list_stored_filename list_dummy_filename list_multiple] = download_batch_loop(matr_img_to_dnld,matr_img_to_dnld_ref,batch_folder,num_figures)
 
 max_img_retries = 3; % number of attempts to download an image
+max_loop_count  = 5; % after so many attempts, it could be a real duplicated image!
 
 result = iw('iMacros_rootfolder',{});
 imacros_root = result.folder;
 imacros_download = [imacros_root 'Downloads' filesep];
 dnld_file = [imacros_download 'main.php'];
 
+flg_max_loop_count = 0;
 flg_do_check = 1;
 if isempty(matr_img_to_dnld)
     % no other image to be downloaded
-    [matr_id, list_stored list_stored_filename list_dummy_filename] = detect_images_to_download(batch_folder,matr_img_to_dnld_ref);
-    list_multiple = check_multiple_images(list_stored,list_stored_filename,matr_img_to_dnld_ref);
+    [temp, list_stored list_stored_filename list_dummy_filename] = detect_images_to_download(batch_folder,matr_img_to_dnld_ref); %#ok<ASGLU>
+    list_multiple = check_multiple_images(list_stored,list_stored_filename,matr_img_to_dnld_ref,max_loop_count,flg_max_loop_count);
     if isempty(list_multiple)
         flg_do_check = 0;
     end
@@ -632,7 +637,12 @@ end
 %% complete check
 if flg_do_check
     ancora = 1;
+    loop_count = 0;
     while ancora
+        loop_count = loop_count+1;
+        if loop_count >= max_loop_count
+            flg_max_loop_count = 1;
+        end
         for i_pos = 1:size(matr_img_to_dnld,1)
             i_img   = matr_img_to_dnld{i_pos,1};
             url_img = matr_img_to_dnld{i_pos,2};
@@ -649,27 +659,68 @@ if flg_do_check
         % check for wrong or multiple images
         [matr_id_check list_stored list_stored_filename list_dummy_filename] = detect_images_to_download(batch_folder,matr_img_to_dnld_ref);
         list_id_check = cell2mat(matr_id_check(:,1));
-        list_multiple = check_multiple_images(list_stored,list_stored_filename,matr_img_to_dnld_ref);
-        if ( size(list_multiple,1)>0 )
-            % multiple images detected
-            list_id_multiple = [];
-            for i_multiple = 1:size(list_multiple,1);
-                list_id_multiple = [list_id_multiple; list_multiple{i_multiple,2}]; %#ok<AGROW>
-            end
-            matr_id_multiple = list_to_matr(matr_img_to_dnld_ref,list_id_multiple);
-            disp('Multiple images detected:')
-            disp(list_id_multiple);
-        else
-            matr_id_multiple = {};
-        end
+        list_multiple = check_multiple_images(list_stored,list_stored_filename,matr_img_to_dnld_ref,max_loop_count,flg_max_loop_count);
+        flg_silent = 0;
+        matr_id_multiple = list_multiple_2_matr_id_multiple(matr_img_to_dnld_ref,list_multiple,flg_silent);
         matr_img_to_dnld = [matr_id_check; matr_id_multiple];    % multiple images were deleted, so they need to be downloaded again
         
         % remove duplicates
-        [temp, ind] = unique(cell2mat(matr_img_to_dnld(:,1)));
+        [temp, ind] = unique(cell2mat(matr_img_to_dnld(:,1))); %#ok<ASGLU>
         matr_img_to_dnld = matr_img_to_dnld(ind,:);
         
-        ancora = ~isempty(list_multiple) || ~isempty(list_id_check);
+        ancora = (~isempty(list_multiple) || ~isempty(list_id_check)) && ~flg_max_loop_count;
     end
+    report_repeated_multiple_images(list_multiple,flg_max_loop_count,batch_folder); % report if there are really multiple images
+end
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function report_repeated_multiple_images(matr_id_multiple,flg_max_loop_count,batch_folder)
+
+parent_folder = fileparts(batch_folder(1:end-1));
+logfile = [parent_folder filesep san_get_config('logfile')];
+
+if (~isempty(matr_id_multiple) && flg_max_loop_count)
+    %% report multiple images
+    ks = sprintf('%d, ',matr_id_multiple{:,2}); ks = ks(1:end-2);
+    msg = sprintf('%s: duplicated images (%s)',batch_folder,ks);
+    disp(['*** ' msg])
+    
+    fid = fopen(logfile,'r');
+    if (fid > 0)
+        txt = fread(fid, 1e6, 'uint8=>char')';
+        fclose(fid);
+    else
+        txt = '';
+    end
+    if isempty(strfind(txt,msg))
+        % new message, append it
+        fid = fopen(logfile,'w');
+        fprintf(fid,'%s\n%s',txt,msg);
+        fclose(fid);
+    end
+end
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function matr_id_multiple = list_multiple_2_matr_id_multiple(matr_img_to_dnld_ref,list_multiple,flg_silent)
+
+if ( size(list_multiple,1)>0 )
+    % multiple images detected
+    list_id_multiple = [];
+    for i_multiple = 1:size(list_multiple,1);
+        list_id_multiple = [list_id_multiple; list_multiple{i_multiple,2}]; %#ok<AGROW>
+    end
+    matr_id_multiple = list_to_matr(matr_img_to_dnld_ref,list_id_multiple);
+    
+    if ~flg_silent
+        disp('Multiple images detected:')
+        disp(list_id_multiple);
+    end
+else
+    matr_id_multiple = {};
 end
 
 
@@ -706,6 +757,7 @@ result.err_code = 1;
 result.err_msg = 'Error opening the web page';
 
 max_count = 5;
+pause_repeated_failure = 10*50; % [s] pause after max_count failures
 
 % regexp special chars to be escaped
 matr_strreplace = {
@@ -758,6 +810,7 @@ while ancora
         ancora = 0;
         result.err_code = 3;
         result.err_msg = ['Repeated failed attempts accessing web page ' url_batch];
+        pause(pause_repeated_failure)
     elseif ancora
         pause(1)
     end
@@ -808,7 +861,7 @@ end
         
         
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function list_multiple = check_multiple_images(list_stored,list_stored_filename,matr_img_to_dnld_ref)
+function list_multiple = check_multiple_images(list_stored,list_stored_filename,matr_img_to_dnld_ref,max_loop_count,flg_max_loop_count)
 
 list_multiple = {};
 
@@ -823,11 +876,11 @@ for i_img = 1:length(list_stored)
     z = dir(img_filename);
     list_bytes(i_img,1) = z.bytes;
 end
-[temp, ind_unique] = unique(list_bytes); % find index to unique occurrence
+[temp, ind_unique] = unique(list_bytes); %#ok<ASGLU> % find index to unique occurrence
 ind_multiple = setdiff(1:length(list_bytes),ind_unique); % potential clones (same byte-size)
 
 %% leave one element for every byte-size
-[temp, ind_unique_bytes] = unique(list_bytes(ind_multiple)); % one element for every byte-size
+[temp, ind_unique_bytes] = unique(list_bytes(ind_multiple)); %#ok<ASGLU> % one element for every byte-size
 ind_multiple = ind_multiple(ind_unique_bytes);
 
 %% assemble vectors of potentially multiple images
@@ -871,7 +924,7 @@ for i_multiple = 1:size(list_multiple,1)
         matr_fingerprint = matr_fingerprint(:,1:3);
     end        
     
-    [temp, ind_unique] = unique(matr_fingerprint,'rows'); % unique images
+    [temp, ind_unique] = unique(matr_fingerprint,'rows'); %#ok<ASGLU> % unique images
     ind_multiple = setdiff(1:length(list_stored_i),ind_unique); % potential clones (same byte-size and image-size)
     % detect all images equal to the detected clones
     ind_rows = [];
@@ -902,20 +955,25 @@ end
 
 %% remove multiple images
 if ( ~isempty(list_multiple) )
-    for i_multiple = 1:size(list_multiple,1)
-        bytes_multiple_i        = list_multiple{i_multiple,1}; % bytes of multiple files
-        list_stored_i           = list_multiple{i_multiple,2}; % id's
-        list_stored_filename_i  = list_multiple{i_multiple,3}; % filenames
-        
-        ks = sprintf('%d,',list_stored_i);
-        ks=ks(1:end-1);
-        num_clones = length(list_stored_i);
-        fprintf(1,'\n\tMultiple files (%d) detected and to be deleted (same size: %d bytes): image id''s: %s\n',num_clones,bytes_multiple_i,ks);
-        
-        cmd = ['delete ' sprintf('''%s'' ',list_stored_filename_i{:})];
-        eval(cmd);
-        
-        fprintf(1,'\tDone (%d files removed).\n',num_clones);
+    if flg_max_loop_count
+        % too many iterations, leaving the duplicated images
+        fprintf(1,'\tSkipping deletion, because %d loops were reached.\n',max_loop_count);
+    else
+        for i_multiple = 1:size(list_multiple,1)
+            bytes_multiple_i        = list_multiple{i_multiple,1}; % bytes of multiple files
+            list_stored_i           = list_multiple{i_multiple,2}; % id's
+            list_stored_filename_i  = list_multiple{i_multiple,3}; % filenames
+            
+            ks = sprintf('%d,',list_stored_i);
+            ks=ks(1:end-1);
+            num_clones = length(list_stored_i);
+            fprintf(1,'\n\tMultiple files (%d) detected and to be deleted (same size: %d bytes): image id''s: %s\n',num_clones,bytes_multiple_i,ks);
+            
+            cmd = ['delete ' sprintf('''%s'' ',list_stored_filename_i{:})];
+            eval(cmd);
+            
+            fprintf(1,'\tDone (%d files removed).\n',num_clones);
+        end
     end
 else
     fprintf(1,'\n\tNo multiple images detected\n')
@@ -934,7 +992,7 @@ z = regexp(img_filename,'\/([0-9]+)_([0-9]+)\.','tokens');
 % ks_subbatch = z{1}{1};
 ks_id       = z{1}{2};
 
-ind_img = find(cell2mat(matr_img_to_dnld_ref(:,1))==str2double(ks_id));
+ind_img = cell2mat(matr_img_to_dnld_ref(:,1))==str2double(ks_id);
 img_url = matr_img_to_dnld_ref{ind_img,2};
 z = regexp(img_url,'\/([0-9]+)_([0-9]+)\.','tokens');
 ks_id_url = z{1}{2};
@@ -999,7 +1057,7 @@ else
     % calculate list of id to be downloaded
     [list_id_ref_real ind] = setdiff(list_id_ref,list_dummy); % remove dummy images (not available)
     matr_id_ref_real = matr_id_ref(ind,:);
-    [list_id ind] = setdiff(list_id_ref_real,list_stored); % remove already downloaded images
+    [temp ind] = setdiff(list_id_ref_real,list_stored); %#ok<ASGLU> % remove already downloaded images
     matr_id = matr_id_ref_real(ind,:);
     
     list_unexpected_id = setdiff(list_stored,list_id_ref_real); % images that are downloaded, but exceed the number of images in the batch!
@@ -1178,4 +1236,32 @@ function create_folder_if_needed(folder)
 
 if ( ~exist(folder,'dir') )
     mkdir(folder)
+end
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function param_value = san_get_config(param_name)
+
+switch param_name
+    case 'logfile'
+        param_value = 'logfile.txt';
+    case 'info_batch'
+        param_value = 'info.mat';
+    case 'info_town'
+        param_value = 'info_town.mat';
+    case 'info_typology'
+        param_value = 'info_typology.mat';
+    otherwise
+        error('Unknown param name %s',param_name)
+end
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function folder = ensure_filesep_ending(folder)
+
+% add '/' or '\' to the folder if it is missing
+if ~strcmp(folder(end),filesep)
+    folder(end+1) = filesep;
 end
