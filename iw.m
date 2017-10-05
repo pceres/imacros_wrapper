@@ -66,7 +66,7 @@ function result = iw(action,varargin)
 %       'iMacros_rootfolder': return iMacros root folder
 %                             Additional output fields:
 %                               'folder': root folder for iMacros
-%       'config_iw': configure iw behaviour
+%       'config_iw': configure iw behaviour (Matlab side)
 %                    Action input must be followed by a cell array in the form
 %                       {param,value} where
 %           param: name of configurable parameter {'debug'}, with
@@ -90,20 +90,20 @@ function result = iw(action,varargin)
 % result = iw('iMacros_rootfolder',{});folder = result.folder
 % result = iw('write_cmd',{'set_param',struct('pause_time','0.2')})
 % result = iw('log',{'this is a debug msg',1})
-% result = iw('pause_rnd',{4,1})
+% result = iw('pause_rnd',{4,1})    % random pause (avg = 4 s, std dev = 1 s)
 % result = iw('rnd_item',{{'ciao','hello','salve'}})
-% result = iw('ask_for_human',{4})
-% result = iw('write_cmd',{'stop'})
+% result = iw('ask_for_human',{4})  % wait for human interaction for 4 s
+% result = iw('write_cmd',{'stop'}) % stop iMacros wrapper infinite loop
 %
 % % build a search string ranking
-% result = iw('write_cmd',{'set_param',struct('pause_time','0.5')})
-% result = iw('write_cmd',{'set_param',struct('dump_type','TXT')})
+% result = iw('write_cmd',{'set_param',struct('pause_time','0.5','dump_type','TXT')})
 % list = {'Fiat','Chrysler','FCA','Volkswagen','Toyota'}';
 % for i=1:size(list,1);
 %   result = iw('write_cmd',{'run','iw/iw_test/Google',6,struct('SEARCHSTRING',list{i,1})})
 %   result = iw('read_fdbk',{''})
 %   z=regexp(result.text,'Circa ([0-9\.]+) risultati','tokens');if isempty(z),num_pages=NaN;else,num_pages=str2double(strrep(z{1}{1},'.',''));end,list{i,2}=num_pages;
 % end
+% result = iw('write_cmd',{'stop'})
 % [temp ind] = sort(-cell2mat(list(:,2)));list=list(ind,:);format long;disp('Classifica delle stringhe di ricerca:');disp(list);format short
 % bar(cell2mat(list(:,2)));mx=max(cell2mat(list(:,2)));grid on;ylabel('Google hits');title(['Logo ranking - ' datestr(now,'mmm dd, yyyy')]);for i=1:size(list,1),val=list{i,2};tag=list{i,1};text(i-length(tag)/25,val+mx/30,tag);end;
 % tag_list = ['list' datestr(now,'yyyy_mm_dd')];filename_arc='logo_arc.mat';if exist(filename_arc,'file'),z=load(filename_arc);else z=struct();end;z.(tag_list)=list;save(filename_arc,'-struct','z');
@@ -164,36 +164,10 @@ switch action
         result0 = read_fdbk(filename);
         result.text = result0.text;
         result.filename_read = result0.filename_read;
-    case 'log'
-        msg   = varargin{1}{1}{1};
-        debug = varargin{1}{1}{2};
-        log(msg,debug);
-        result0.err_code = 0; % default result as there is no output
-    case 'pause_rnd'
-        avg_time    = varargin{1}{1}{1};
-        st_dev      = varargin{1}{1}{2};
-        result0 = pause_rnd(avg_time,st_dev);
-        result.t_pause = result0.t_pause;
-    case 'rnd_item'
-        list = varargin{1}{1}{1};
-        item = rnd_item(list);
-        result.item = item;
-        result0.err_code = 0; % default result as there is no output
-    case 'ask_for_human'
-        timeout = varargin{1}{1}{1};
-        result0 = ask_for_human(timeout);
-        result.flg_return = result0.flg_return;
-        result0.err_code = 0; % default result as there is no output
-    case 'iMacros_rootfolder'
-        folder = iMacros_rootfolder();
-        result.folder = folder;
-        result0.err_code = 0; % default result as there is no output
-    case 'config_iw'
-        param_name   = varargin{1}{1}{1};
-        param_value  = varargin{1}{1}{2};
-        result0 = config_iw(param_name,param_value);
     otherwise
-        error('I shouldn''t be here! (action %s)',action)
+        % service actions (those that don't interact directly with iMacros)
+        params = varargin;
+        [result result0] = service_actions(action,params,result);
 end
 
 if (result0.err_code>0)
@@ -204,6 +178,44 @@ end
 
 result.err_code = err_code;
 result.err_msg = err_msg;
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [result result0] = service_actions(action,params,result)
+
+switch action
+    case 'log'
+        msg   = params{1}{1}{1};
+        debug = params{1}{1}{2};
+        log(msg,debug);
+        result0.err_code = 0; % default result as there is no output
+    case 'pause_rnd'
+        avg_time    = params{1}{1}{1};
+        st_dev      = params{1}{1}{2};
+        result0 = pause_rnd(avg_time,st_dev);
+        result.t_pause = result0.t_pause;
+    case 'rnd_item'
+        list = params{1}{1}{1};
+        item = rnd_item(list);
+        result.item = item;
+        result0.err_code = 0; % default result as there is no output
+    case 'ask_for_human'
+        timeout = params{1}{1}{1};
+        result0 = ask_for_human(timeout);
+        result.flg_return = result0.flg_return;
+        result0.err_code = 0; % default result as there is no output
+    case 'iMacros_rootfolder'
+        folder = iMacros_rootfolder();
+        result.folder = folder;
+        result0.err_code = 0; % default result as there is no output
+    case 'config_iw'
+        param_name   = params{1}{1}{1};
+        param_value  = params{1}{1}{2};
+        result0 = config_iw(param_name,param_value);
+    otherwise
+        error('I shouldn''t be here! (action %s)',action)
+end
 
 
 
@@ -308,7 +320,7 @@ result.filename_read = filename_read;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function reset_fdbk()
 
-[temp, filename_read] = read_fdbk();
+[temp, filename_read] = read_fdbk(); %#ok<ASGLU>
 
 delete(filename_read);
 
@@ -459,23 +471,7 @@ if (fid>0)
             % skip first 3 encoding chars
             txt = txt(4:end);
         end
-        z = strtrim(regexp(txt,'[\r\n][^\r\n]+[\r\n]*$','match')); % read last line
-        if isempty(z)
-            % try single line
-            z = strtrim(regexp(txt,'[^\r\n]+[\r\n]*$','match'));
-        end
-        if ~isempty(z)
-            lastline = strtrim(z{1});
-            fields = regexp(lastline,'","','split');
-            fields{1} = fields{1}(2:end);
-            fields{end} = fields{end}(1:end-1);
-            
-            err_code = str2double(fields{2});
-            err_msg  = fields{end};
-        else
-            err_code = 12;
-            err_msg  = 'No feedback available from iMacros wrapper';
-        end
+        [err_code err_msg] = get_fdbk_from_text(txt); % extract feedback
     else
         % timeout
         err_code = 11;
@@ -490,6 +486,29 @@ end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [err_code err_msg] = get_fdbk_from_text(txt)
+
+z = strtrim(regexp(txt,'[\r\n][^\r\n]+[\r\n]*$','match')); % read last line
+if isempty(z)
+    % try single line
+    z = strtrim(regexp(txt,'[^\r\n]+[\r\n]*$','match'));
+end
+if ~isempty(z)
+    lastline = strtrim(z{1});
+    fields = regexp(lastline,'","','split');
+    fields{1} = fields{1}(2:end);
+    fields{end} = fields{end}(1:end-1);
+    
+    err_code = str2double(fields{2});
+    err_msg  = fields{end};
+else
+    err_code = 12;
+    err_msg  = 'No feedback available from iMacros wrapper';
+end
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function result = ask_for_human(timeout)
 
 err_code = 0;
@@ -498,6 +517,7 @@ err_msg = 0;
 result = struct();
 
 figure(999);
+set(gcf,'ToolBar','none','MenuBar','none','NumberTitle','off','Name',sprintf('User interaction within %.0f s',timeout))
 h2=fill([0 1 1 0],[1 1 0 0],[1 0 0]);
 
 c = [1 0 0;0 1 0; 0 0 1];
@@ -509,7 +529,9 @@ while ancora
     count = count+1;
     try
         delete(h2)
-        h2=fill([0 1 1 0],[1 1 0 0],c(count,:));
+        h2=fill([0 1 1 0],[1 1 0 0],c(mod(count-1,size(c,1))+1,:));
+        text(0.1,0.5,'Close the figure to resume','FontSize',24);
+        set(gca,'Visible','off')
         flg_return = 0;
         ancora = (count<=timeout);
     catch %#ok<CTCH>
@@ -519,6 +541,11 @@ while ancora
     end
     if (ancora)
         pause(1);
+    else
+        if (flg_return==0)
+            % figure was not closed, close it here
+            close(999)
+        end
     end
 end
 

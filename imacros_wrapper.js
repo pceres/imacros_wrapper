@@ -1,4 +1,5 @@
-﻿
+//imacros-js:showsteps no
+
 // default values for configurable parameters
 var dump_type = "TXT";	// default web page dump type
 var pause_time = 1; 	// default pause in idle loop

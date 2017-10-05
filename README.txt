@@ -17,3 +17,10 @@ Instructions for set up:
 - Open Matlab, and add to the path the imacros Macro subfolder (where the iw.m file is located).
   This way you are ready to run iw commands from Matlab prompt or from any program.
 - See iw.m help ("help iw" from Matlab prompt), and then start playing, beginning from the examples shown (such as the Google test).
+
+
+To improve performance, allowing very long runs (many days):
+- disable sleep mode, to let iMacros wrapper work continuously.
+  On a Linux laptop, you can achieve this with the following command: xset -dpms s off
+- disable JavaScript commands in iMacros window. Otherwise, the script becomes slower and slower.
+  On the iMacros side tab: Manage --> Settings --> Javascript scripting settings --> uncheck "Show Javascript during replay"
