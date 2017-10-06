@@ -8,7 +8,7 @@ function result = san(action,params)
 % result = san('dnld_batch',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/Nati/1818/978/','/home/ceres/StatoCivileSAN/Caposele_Restaurazione/','Caposele_Nati_1818_978','978'}) % plain batch
 % result = san('dnld_batch',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/Nati/1827/988/','/home/ceres/StatoCivileSAN/Caposele_Restaurazione/','Caposele_Nati_1827_988','988'}) % some images are not available (dummy images: 3, 5)
 % result = san('dnld_batch',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Valvaoggi+Salerno/Matrimoni+processetti/1855/6484/','/home/ceres/StatoCivileSAN/Valva_Restaurazione/','Valva_MatrimoniProcessetti_1855_6484','6484'}) % subbatch (first part of image name) is not the same for all batch images
-% 
+%
 % % download a whole typology (eg Caposele Nati (all years) )
 % result = san('dnld_typology',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/Matrimoni+processetti/','/home/ceres/StatoCivileSAN/Caposele_Restaurazione/','Caposele_MatrimoniProcessetti','Matrimoni, processetti'})
 %
@@ -82,7 +82,7 @@ else
             else
                 result_typology = {}; %#ok<UNRCH>
             end
-
+            
             matr_typology{i_item,3} = result_typology; %matr_years;
             
             % save updated info
@@ -229,6 +229,8 @@ else
     % get batch info (number of images, etc.)
     result0 = detect_batch_info(url_batch,tag_batch,folder_root,folder_batch,special_string);
     if (result0.err_code ~= 0)
+        fprintf(1,'Error detecting info for batch %s\ntype ''return'' to continue...',url_batch)
+        keyboard
         err_code = 2;
         err_msg  = sprintf('problems accessing batch info from web page %s',url_batch);
     else
@@ -237,7 +239,7 @@ else
         %url_img_template     = result0.url_img_template;
         batch_folder         = ensure_filesep_ending(result0.batch_folder);
         matr_img_to_dnld_ref = result0.matr_img; % matrix with list of all images in batch (numeric id in col1, url in col2)
-
+        
         % detect images to be downloaded
         [matr_img_to_dnld list_stored] = detect_images_to_download(batch_folder,matr_img_to_dnld_ref); %#ok<NASGU> list_stored s overwritten by download_batch_loop
         
@@ -245,7 +247,7 @@ else
         [list_stored list_stored_filename list_dummy_filename list_multiple] = download_batch_loop(matr_img_to_dnld,matr_img_to_dnld_ref,batch_folder,num_figures);
         matr_stored = list_to_matr(matr_img_to_dnld_ref,list_stored);
         
-        fprintf(1,'Batch %s was downloaded.\n',folder_batch);
+        fprintf(1,'Batch %s was downloaded (%d images stored).\n',folder_batch,size(matr_stored,1));
         
         result_batch = struct();
         result_batch.batch_folder = batch_folder;     % fullname of folder containing images
@@ -337,31 +339,33 @@ for i_year = 1:size(matr_years,1)
     matr_year = matr_years{i_year,3};
     
     for i_batch = 1:size(matr_year,1)
-        str=matr_year{i_batch,3};
+        str = matr_year{i_batch,3};
         
-        z=regexp(str.list_dummy_filename,'([0-9]+)\.','tokens');
-        z3=[z{:}]';
-        if isempty(z3)
-            ks_missing = '';
-        else
-            list_missing_id = str2double([z3{:}]');
-            ks_missing = num2str(list_missing_id','%d,');
-            ks_missing = ks_missing(1:end-1);
-        end
-        
-        if isempty(str)
+        if ( isempty(str) || isempty(fieldnames(str)) )
             msg='*** ';
-            ks_year='???';
+            ks_year='<unknown batch>';
+            ks_missing  = '';
         else
+            z=regexp(str.list_dummy_filename,'([0-9]+)\.','tokens');
+            z3=[z{:}]';
+            if isempty(z3)
+                ks_missing = '';
+            else
+                list_missing_id = str2double([z3{:}]');
+                ks_missing = num2str(list_missing_id','%d,');
+                ks_missing = ks_missing(1:end-1);
+            end
+            
             [temp, ks_year] = fileparts(str.batch_folder(1:end-1)); %#ok<ASGLU>
             if ~isempty(str.list_dummy_filename)
-                msg='!!! ';
+                msg = '!!! ';
             else
-                msg='    ';
+                msg = '    ';
             end
+            
         end
         v_status{end+1} = msg; %#ok<AGROW>
-        fprintf(1,'%s%s\t%s\n',msg,ks_year,ks_missing);
+        fprintf(1,'%d %s%s\t%s\n',i_year,msg,ks_year,ks_missing);
     end
 end
 
@@ -429,7 +433,10 @@ function result = detect_batch_info(url_batch,tag_batch,folder_root,folder_batch
 
 err_code = 0;
 err_msg  = '';
-matr_img = {};
+matr_img         = {};
+num_img          = NaN;
+num_figures      = NaN;
+url_img_template = '';
 
 info_matfile = san_get_config('info_batch');
 
@@ -462,55 +469,61 @@ if ( ~flg_fast_result )
         err_msg  = sprintf('problems accessing web page %s',url_batch);
     else
         text_batch_first = result0.text;
-        z = regexp(text_batch_first,'href="([^"]*)">\s*Immagine 1[^0-9]','tokens');
-        url_img1 = z{1}{1};
-        z2_first = regexp(url_img1,'([0-9]+)_([0-9]+)\.jpg.html','tokens');
-        sub_batch_first = z2_first{1}{1}; % magic id for the batch images (it is usually the same for all images, but there are exceptions, i.e. Valva Restaurazione Processetti 1855)
-        %ks_num_img      = z2_first{1}{2}; % of course id is 1!
-        
-        % view image 1
-        result0 = open_batch_page('go_image',url_img1,'Immagine<SP>1','Immagine 1',{});
-        result0_text = result0.text;
-        
-        z=regexp(result0_text,'href="([^"]*)" class="last"','match');
-        imglast=z{1}; % piece of anchor tag containing last image url
-        z2_last = regexp(imglast,'([0-9]+)_([0-9]+)\.jpg.html','tokens');
-        sub_batch_last  = z2_last{1}{1};
-        ks_num_img      = z2_last{1}{2};
-        
-        num_figures = length(ks_num_img); % number of figures in image number format
-        num_img = str2double(ks_num_img); % number of images to be downloaded
-        z2 = regexp(imglast,'href="([^"]*)"','tokens');
-        url_img_template = regexprep(z2{1}{1},['_' ks_num_img '\.jpg.html'],['_' special_string '\.jpg.html']);
-         
-        %% detetct list of all images in batch
-        if ~strcmp(sub_batch_first,sub_batch_last)
-            % there is more than one single subbatch for the batch: it is
-            % needed to detect url for each image
-            disp('Multiple subbatch detected: complete url listing is needed...')
-            result0 = get_img_list(text_batch_first,tag_batch,batch_folder);
+        z = regexp(text_batch_first,'href="([^"]*)">\s*Immagine ([0-9]+)','tokens');
+        if isempty(z)
+            err_code = 2;
+            err_msg  = ['problems accessing web page ' url_batch];
         else
-            % all images are in the same subbatch, the list can be created
-            % easily
-            matr_img = {};
-            for i_img = 1:num_img
-                num_figures = length(ks_num_img); % number of figures in image number format
-                img_tag = sprintf(['%0' num2str(num_figures) 'd'],i_img);
-                url_img = strrep(url_img_template,special_string,img_tag);
-                matr_img(end+1,:) = {i_img, url_img}; %#ok<AGROW>
-            end
+            url_img1 = z{1}{1}; % url of first "Immagine" in the batch
+            id_img1  = z{1}{2}; % lower id of "Immagine X" in batch. It is usually 1, but there are exceptions, such as http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Acerno/Diversi/1835/21/
+            z2_first = regexp(url_img1,'([0-9]+)_([0-9]+)\.jpg.html','tokens');
+            sub_batch_first = z2_first{1}{1}; % magic id for the batch images (it is usually the same for all images, but there are exceptions, i.e. Valva Restaurazione Processetti 1855)
+            ks_num_img_first = z2_first{1}{2}; % it can be different from 1, even if linked to "Immagine 1"
+            
+            % view image 1
+            result0 = open_batch_page('go_image',url_img1,['Immagine<SP>' id_img1],['Immagine ' id_img1],{});
+            result0_text = result0.text;
+            
+            z=regexp(result0_text,'href="([^"]*)" class="last"','match');
+            imglast=z{1}; % piece of anchor tag containing last image url
+            z2_last = regexp(imglast,'([0-9]+)_([0-9]+)\.jpg.html','tokens');
+            sub_batch_last  = z2_last{1}{1};
+            ks_num_img_last      = z2_last{1}{2};
+            
+            num_figures = length(ks_num_img_last); % number of figures in image number format
+            num_img = str2double(ks_num_img_last)-str2double(ks_num_img_first)+str2double(id_img1); % number of last "Immagine" to be downloaded
+            z2 = regexp(imglast,'href="([^"]*)"','tokens');
+            url_img_template = regexprep(z2{1}{1},['_' ks_num_img_last '\.jpg.html'],['_' special_string '\.jpg.html']);
+            
+            %% detetct list of all images in batch
+            if ( ~strcmp(sub_batch_first,sub_batch_last) || (str2double(ks_num_img_first)~=1) )
+                % there is more than one single subbatch for the batch: it is
+                % needed to detect url for each image
+                disp('Multiple subbatch detected: complete url listing is needed...')
+                result0 = get_img_list(text_batch_first,tag_batch,batch_folder);
+            else
+                % all images are in the same subbatch, the list can be created
+                % easily
+                matr_img = {};
+                for i_img = 1:num_img
+                    num_figures = length(ks_num_img); % number of figures in image number format
+                    img_tag = sprintf(['%0' num2str(num_figures) 'd'],i_img);
+                    url_img = strrep(url_img_template,special_string,img_tag);
+                    matr_img(end+1,:) = {i_img, url_img}; %#ok<AGROW>
+                end
                 
-            result0.err_code = 0;
-            result0.err_msg  = '';
-            result0.matr_img = matr_img;
-        end
-        
-        %% manage batch error detection
-        if (result0.err_code ~= 0)
-            err_code = result0.err_code;
-            err_msg  = result0.err_msg;
-        else
-            matr_img = result0.matr_img; % col1: img id, col2: img url
+                result0.err_code = 0;
+                result0.err_msg  = '';
+                result0.matr_img = matr_img;
+            end
+            
+            %% manage batch error detection
+            if (result0.err_code ~= 0)
+                err_code = result0.err_code;
+                err_msg  = result0.err_msg;
+            else
+                matr_img = result0.matr_img; % col1: img id, col2: img url
+            end
         end
     end
     
@@ -557,6 +570,7 @@ while ancora
     matr_img = [matr_img;matr_img0]; %#ok<AGROW>
     z = regexp(text_batch,'href="([^"]*)"[^>]*>successivo','tokens');
     if isempty(z)
+        % missing link "successivo" (next), so no more pages
         text_batch = '';
         ancora = 0;
     else
@@ -858,8 +872,8 @@ if ancora
     disp(err_msg)
 end
 
-        
-        
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function list_multiple = check_multiple_images(list_stored,list_stored_filename,matr_img_to_dnld_ref,max_loop_count,flg_max_loop_count)
 
@@ -922,7 +936,7 @@ for i_multiple = 1:size(list_multiple,1)
         matr_fingerprint(:,1) = rand(size(matr_fingerprint,1),1);
     else
         matr_fingerprint = matr_fingerprint(:,1:3);
-    end        
+    end
     
     [temp, ind_unique] = unique(matr_fingerprint,'rows'); %#ok<ASGLU> % unique images
     ind_multiple = setdiff(1:length(list_stored_i),ind_unique); % potential clones (same byte-size and image-size)
