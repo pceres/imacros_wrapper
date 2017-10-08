@@ -1101,6 +1101,7 @@ function flg_ok = download_img(ind_img,url_img,dnld_file,batch_folder,num_figure
 flg_ok = 0;
 
 bytes_thr = 5e5; % [bytes] min size to accept image as ok
+bytes_thr2 = 3e5; % last attempt for small images
 
 z = regexp(url_img,'[0-9_]*\.jpg','match');
 name_img = z{1}; % es. 005680090_00003.jpg
@@ -1118,7 +1119,7 @@ if ( result0.err_code == 0 )
         fprintf(1,'%d: %s\n',result0.err_code,result0.err_msg)
     end
     
-    try_movefile = wait_for_downloaded_file(dnld_file,bytes_thr);
+    try_movefile = wait_for_downloaded_file(dnld_file,bytes_thr,bytes_thr2);
     if try_movefile
         movefile(dnld_file,img_file);
         
@@ -1139,7 +1140,7 @@ end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function try_movefile = wait_for_downloaded_file(dnld_file,bytes_thr)
+function try_movefile = wait_for_downloaded_file(dnld_file,bytes_thr,bytes_thr2)
 
 try_movefile = 0;
 
@@ -1161,8 +1162,11 @@ if (count>=max_count)
     end
     pause(20)
     z = dir(dnld_file);
-    if ( isempty(z) || (z(1).bytes < bytes_thr) )
+    if ( isempty(z) || (z(1).bytes < bytes_thr2) )
         % still missing!
+        if ~isempty(z)
+            fprintf(1,'    Apparently image has size %d, too little (min size is set at %d bytes)\n',z(1).bytes,bytes_thr)
+        end
     else
         try_movefile = 1;
     end
