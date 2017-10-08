@@ -226,11 +226,18 @@ if (result0.err_code ~= 0)
     err_code = 1;
     err_msg  = 'problems with iMacros_wrapper';
 else
+    % manage batch folder creation
+    batch_folder = [folder_root folder_batch filesep];
+    create_folder_if_needed(folder_root);
+    create_folder_if_needed(batch_folder);
+    
     % get batch info (number of images, etc.)
-    result0 = detect_batch_info(url_batch,tag_batch,folder_root,folder_batch,special_string);
+    result0 = detect_batch_info(url_batch,tag_batch,batch_folder,folder_batch,special_string);
     if (result0.err_code ~= 0)
-        fprintf(1,'Error detecting info for batch %s\ntype ''return'' to continue...',url_batch)
-        keyboard
+        msg = sprintf('%s: error detecting info for batch',batch_folder);
+        disp(['*** ' msg])
+        log_message(msg,batch_folder)
+        %keyboard
         err_code = 2;
         err_msg  = sprintf('problems accessing batch info from web page %s',url_batch);
     else
@@ -429,7 +436,7 @@ result.err_msg = err_msg;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function result = detect_batch_info(url_batch,tag_batch,folder_root,folder_batch,special_string)
+function result = detect_batch_info(url_batch,tag_batch,batch_folder,folder_batch,special_string)
 
 err_code = 0;
 err_msg  = '';
@@ -439,10 +446,6 @@ num_figures      = NaN;
 url_img_template = '';
 
 info_matfile = san_get_config('info_batch');
-
-batch_folder = [folder_root folder_batch filesep];
-create_folder_if_needed(folder_root);
-create_folder_if_needed(batch_folder);
 
 info_fullname = [batch_folder info_matfile];
 flg_fast_result = 0; % 0 --> need to visit website; 1 --> info is already available
@@ -454,7 +457,7 @@ if exist(info_fullname,'file')
         num_figures         = batch_info.num_figures;
         url_img_template    = batch_info.url_img_template;
         matr_img            = batch_info.matr_img; ...
-        %batch_folder        = batch_info.batch_folder; % don't take the original one, as the folder could have been removed
+            %batch_folder        = batch_info.batch_folder; % don't take the original one, as the folder could have been removed
         flg_fast_result = 1;
     else
         fprintf(1,'Batch info is present in %s, but has an obsolete format. Rebuilding...\n',folder_batch)
@@ -506,7 +509,6 @@ if ( ~flg_fast_result )
                 % easily
                 matr_img = {};
                 for i_img = 1:num_img
-                    num_figures = length(ks_num_img); % number of figures in image number format
                     img_tag = sprintf(['%0' num2str(num_figures) 'd'],i_img);
                     url_img = strrep(url_img_template,special_string,img_tag);
                     matr_img(end+1,:) = {i_img, url_img}; %#ok<AGROW>
@@ -692,28 +694,35 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function report_repeated_multiple_images(matr_id_multiple,flg_max_loop_count,batch_folder)
 
-parent_folder = fileparts(batch_folder(1:end-1));
-logfile = [parent_folder filesep san_get_config('logfile')];
-
 if (~isempty(matr_id_multiple) && flg_max_loop_count)
     %% report multiple images
     ks = sprintf('%d, ',matr_id_multiple{:,2}); ks = ks(1:end-2);
     msg = sprintf('%s: duplicated images (%s)',batch_folder,ks);
     disp(['*** ' msg])
     
-    fid = fopen(logfile,'r');
-    if (fid > 0)
-        txt = fread(fid, 1e6, 'uint8=>char')';
-        fclose(fid);
-    else
-        txt = '';
-    end
-    if isempty(strfind(txt,msg))
-        % new message, append it
-        fid = fopen(logfile,'w');
-        fprintf(fid,'%s\n%s',txt,msg);
-        fclose(fid);
-    end
+    log_message(msg,batch_folder)
+end
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function log_message(msg,batch_folder)
+
+parent_folder = fileparts(batch_folder(1:end-1));
+logfile = [parent_folder filesep san_get_config('logfile')];
+
+fid = fopen(logfile,'r');
+if (fid > 0)
+    txt = fread(fid, 1e6, 'uint8=>char')';
+    fclose(fid);
+else
+    txt = '';
+end
+if isempty(strfind(txt,msg))
+    % new message, append it
+    fid = fopen(logfile,'w');
+    fprintf(fid,'%s\n%s',txt,msg);
+    fclose(fid);
 end
 
 
