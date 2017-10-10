@@ -1,6 +1,4 @@
-﻿VERSION BUILD=8970419 RECORDER=FX
-
-' input:
+﻿' input:
 'SET MONTH_TAG Agosto
 'SET MONTH_POS 1
 'SET DAY 31
@@ -25,7 +23,6 @@ TAG POS=1 TYPE=DIV ATTR=TXT:Settimana<SP>dal
 
 ' save page as htm
 SET {{!EXTRACT}} =
-'FRAME NAME="itsframe1_201*"
 TAG POS=1 TYPE=DIV ATTR=TXT:Consuntivazione<SP>per<SP>Impiegati<SP>Settimana<SP>dal<SP>* EXTRACT=HTM
 SET !ERRORIGNORE YES
 FILEDELETE NAME=OreROC.txt

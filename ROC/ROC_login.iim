@@ -1,6 +1,6 @@
-﻿
-'URL GOTO=https://peoplenetwork.fcagroup.com/it/Pages/Homepage.aspx
-'TAG POS=1 TYPE=A ATTR=TXT:Roc<SP>-<SP>CRF<SP>Consuntivazione<SP>ore
+﻿' input:
+'SET USERNAME ceres
+'SET PASSWORD <password>
 
 URL GOTO=https://www.time.fiatservices.it/jsipert2/JSipert2AD
 URL GOTO=http://sapiensweb.fiat.com/crfroc?~transaction=ZRCA_ORE&sap-language=IT

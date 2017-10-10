@@ -472,22 +472,28 @@ if ( ~flg_fast_result )
         result0 = open_batch_page('go_image',url_img1,'Immagine<SP>1','Immagine 1',{});
         result0_text = result0.text;
         
-        z=regexp(result0_text,'href="([^"]*)" class="last"','match');
-        imglast=z{1}; % piece of anchor tag containing last image url
-        z2_last = regexp(imglast,'([0-9]+)_([0-9]+)\.jpg.html','tokens');
+        z=regexp(result0_text,'href="([^"]*)" class="last"','tokens');
+        url_imglast = z{1}{1}; % piece of anchor tag containing last image url
+        z2_last = regexp(url_imglast,'([0-9]+)_([0-9]+)\.jpg.html','tokens');
         sub_batch_last  = z2_last{1}{1};
         ks_num_img      = z2_last{1}{2};
-        
         num_figures = length(ks_num_img); % number of figures in image number format
-        num_img = str2double(ks_num_img); % number of images to be downloaded
-        z2 = regexp(imglast,'href="([^"]*)"','tokens');
-        url_img_template = regexprep(z2{1}{1},['_' ks_num_img '\.jpg.html'],['_' special_string '\.jpg.html']);
+        num_img_last_url = str2double(ks_num_img); % number of images to be downloaded
+        url_img_template = regexprep(url_imglast,['_' ks_num_img '\.jpg.html'],['_' special_string '\.jpg.html']);
+        
+        % view image last
+        result1 = open_batch_page('go_image',url_imglast,'Immagine *','Immagine [0-9]+',{});
+        result1_text = result1.text;
+        z = regexp(result1_text,'<h1[^>]+>Immagine ([^<]+)</h1>','tokens');
+        ks_num_imglast = z{1}{1}; % number of last image
+        num_img = str2double(ks_num_imglast);
          
         %% detetct list of all images in batch
-        if ~strcmp(sub_batch_first,sub_batch_last)
-            % there is more than one single subbatch for the batch: it is
-            % needed to detect url for each image
+        if ( ~strcmp(sub_batch_first,sub_batch_last) || (num_img_last_url~=num_img) )
+            % there is more than one single subbatch for the batch, or the last image has a different number 
+            % in image id and url: it is needed to detect url for each image
             disp('Multiple subbatch detected: complete url listing is needed...')
+            fprintf(1,'\tsub_batches: %s..%s, last image number: in title %d & in url %d\n',sub_batch_first,sub_batch_last,num_img,num_img_last_url)
             result0 = get_img_list(text_batch_first,tag_batch,batch_folder);
         else
             % all images are in the same subbatch, the list can be created

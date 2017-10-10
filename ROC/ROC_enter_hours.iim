@@ -1,5 +1,4 @@
-﻿
-' input:
+﻿' input:
 'SET COMMESSA1 KIEC002_PERT_PWT
 'SET HOURS1 4,25
 'SET COMMESSA2 KIGI004_PERT_PWT
@@ -47,7 +46,7 @@ TAG POS=1 TYPE=DIV ATTR=TXT:Settimana<SP>dal
 
 ' save page as htm
 SET {{!EXTRACT}} =
-FRAME NAME="itsframe1_201*"
+FRAME NAME="itsframe1_2*"
 TAG POS=1 TYPE=DIV ATTR=TXT:Consuntivazione<SP>per<SP>Impiegati<SP>Settimana<SP>dal<SP>* EXTRACT=HTM
 FILEDELETE NAME=OreROC.txt
 SAVEAS TYPE=EXTRACT FOLDER=* FILE=OreROC.txt

@@ -61,7 +61,7 @@ try
         end
     end
 catch me %#ok<NASGU>
-    if exist('result','var')
+    if ( exist('result','var') && (result.err_code ~= 0) )
         % error inside iw call
         show_error(result)
     else
@@ -75,11 +75,20 @@ end
 function [str_hours str_status] = analyse_OreROC()
 % analyse html code from OreROC.txt, saved externally
 
+str_hours   = [];
+str_status  = [];
+
 % read page
 result = iw('read_fdbk',{'OreROC.txt'});
 
 %% detect ROC hours to be managed
 z = regexp(result.text,'ALTERNATING'',[0-9]+:''[^'']+','match')';
+if isempty(z)
+    % error in page code, return
+    str_status.msg = 'ERROR: web page format not correct!';
+    return
+end
+
 z2 = strrep(z,'\x20','');
 z3 = regexprep(z2,'ALTERNATING'',[0-9]+:''','');
 h_cons = str2double(strrep(z3{5},',','.'));
