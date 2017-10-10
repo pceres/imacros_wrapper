@@ -478,31 +478,40 @@ if ( ~flg_fast_result )
             err_msg  = ['problems accessing web page ' url_batch];
         else
             url_img1 = z{1}{1}; % url of first "Immagine" in the batch
-            id_img1  = z{1}{2}; % lower id of "Immagine X" in batch. It is usually 1, but there are exceptions, such as http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Acerno/Diversi/1835/21/
+            id_img1  = z{1}{2}; % lower id of "Immagine X" in batch. It is usually 1, but there are exceptions, such as Salerno Restaurazione Acerno Diversi 1835 21
             z2_first = regexp(url_img1,'([0-9]+)_([0-9]+)\.jpg.html','tokens');
-            sub_batch_first = z2_first{1}{1}; % magic id for the batch images (it is usually the same for all images, but there are exceptions, i.e. Valva Restaurazione Processetti 1855)
+            sub_batch_first = z2_first{1}{1}; % magic id for the batch images (it is usually the same for all images, but there are exceptions, i.e. Salerno Restaurazione Valva Processetti 1855)
             ks_num_img_first = z2_first{1}{2}; % it can be different from 1, even if linked to "Immagine 1"
             
-            % view image 1
+            % view first image
             result0 = open_batch_page('go_image',url_img1,['Immagine<SP>' id_img1],['Immagine ' id_img1],{});
             result0_text = result0.text;
-            
-            z=regexp(result0_text,'href="([^"]*)" class="last"','match');
-            imglast=z{1}; % piece of anchor tag containing last image url
-            z2_last = regexp(imglast,'([0-9]+)_([0-9]+)\.jpg.html','tokens');
+            z = regexp(result0_text,'href="([^"]*)" class="last"','tokens');
+            url_imglast = z{1}{1}; % piece of anchor tag containing last image url
+            z2_last = regexp(url_imglast,'([0-9]+)_([0-9]+)\.jpg.html','tokens');
             sub_batch_last  = z2_last{1}{1};
-            ks_num_img_last      = z2_last{1}{2};
-            
+            ks_num_img_last = z2_last{1}{2};
             num_figures = length(ks_num_img_last); % number of figures in image number format
-            num_img = str2double(ks_num_img_last)-str2double(ks_num_img_first)+str2double(id_img1); % number of last "Immagine" to be downloaded
-            z2 = regexp(imglast,'href="([^"]*)"','tokens');
-            url_img_template = regexprep(z2{1}{1},['_' ks_num_img_last '\.jpg.html'],['_' special_string '\.jpg.html']);
+            num_img_last_url = str2double(ks_num_img_last); % number of last "Immagine" to be downloaded
+            url_img_template = regexprep(url_imglast,['_' ks_num_img_last '\.jpg.html'],['_' special_string '\.jpg.html']);
+                        
+            % view image last
+            result1 = open_batch_page('go_image',url_imglast,'Immagine *','Immagine [0-9]+',{});
+            result1_text = result1.text;
+            z = regexp(result1_text,'<h1[^>]+>Immagine ([^<]+)</h1>','tokens');
+            ks_num_imglast = z{1}{1}; % number of last image
+            num_img = str2double(ks_num_imglast);
             
             %% detetct list of all images in batch
-            if ( ~strcmp(sub_batch_first,sub_batch_last) || (str2double(ks_num_img_first)~=1) )
-                % there is more than one single subbatch for the batch: it is
-                % needed to detect url for each image
+            flg_full_listing_1 = ~strcmp(sub_batch_first,sub_batch_last);   % first and last image belong to different sub_batches, eg. Salerno Restaurazione Valva Processetti 1855 6484:  result = san('dnld_batch',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Valvaoggi+Salerno/Matrimoni+processetti/1855/6484/','/home/ceres/StatoCivileSAN/Valva_Restaurazione/','Valva_MatrimoniProcessetti_1855_6484','6484'})
+            flg_full_listing_2 = (str2double(ks_num_img_first)~=1);         % first image has not id 1 in the url, eg. Salerno Restaurazione Acerno Diversi 1835 21:  result = san('dnld_batch',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Acerno/Diversi/1835/21/','/home/ceres/StatoCivileSAN/Acerno_Restaurazione/','Acerno_Diversi_1835_21','21'})
+            flg_full_listing_3 = (num_img_last_url~=num_img);               % last image has not the same id in the url, eg. Salerno Restaurazione Acerno Morti 1850 26:  result = san('dnld_batch',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Acerno/Morti/1850/26/','/home/ceres/StatoCivileSAN/Acerno_Restaurazione/','Acerno_Morti_1850_26','26'})
+            if ( flg_full_listing_1 || flg_full_listing_2 || flg_full_listing_3 )
+                % there is more than one single subbatch for the batch, the
+                % first image has not id 1 in the url, or the last image has a different number
+                % in image id and url: it is needed to detect url for each image
                 disp('Multiple subbatch detected: complete url listing is needed...')
+                fprintf(1,'\tsub_batches: %s..%s\n\tfirst image number: in title %d & in url %d\n\tlast image number: in title %d & in url %d\n',sub_batch_first,sub_batch_last,str2double(id_img1),str2double(ks_num_img_first),num_img,num_img_last_url)
                 result0 = get_img_list(text_batch_first,tag_batch,batch_folder);
             else
                 % all images are in the same subbatch, the list can be created
