@@ -1,5 +1,7 @@
-﻿' input:
-' FILENAME: name of file containing commands (eg. "SET FILENAME /home/ceres/iMacros/Downloads/command.csv")
+﻿'input:
+'FILENAME command.csv : name of file containing commands (eg. "SET FILENAME /home/ceres/iMacros/Downloads/command.csv")
+'
+'SET FILENAME command.csv
 
 CMDLINE !DATASOURCE {{FILENAME}}
 'Number of columns in the CSV file. This must be accurate!

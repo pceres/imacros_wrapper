@@ -1,6 +1,10 @@
-﻿' input:
-' RETURN_CODE: return code to be written
-' RETURN_MSG: last error msg if any
+﻿'input:
+'RETURN_CODE 0 : return code to be written
+'RETURN_MSG '' : last error msg if any
+'
+'SET RETURN_CODE 0
+'SET RETURN_MSG ''
+
 SET !EXTRACT {{TIMESTAMP}}
 ADD !EXTRACT {{RETURN_CODE}}
 ADD !EXTRACT {{RETURN_MSG}}

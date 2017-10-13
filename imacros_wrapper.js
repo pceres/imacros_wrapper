@@ -1,17 +1,17 @@
-//imacros-js:showsteps no
+﻿//imacros-js:showsteps no
 
 // default values for configurable parameters
-var dump_type = "TXT";	// default web page dump type
-var pause_time = 1; 	// default pause in idle loop
-var flg_clear = 0;	// default CLEAR behaviour [0,1] 1 --> issue CLEAR command at each loop, clearing all cookies. Speed up performances, but prevents login and session management 
+var dump_type = "TXT";  // {TXT,HTM,CPL,BMP,JPEG,PNG} default web page dump type
+var pause_time = 1;     // default pause in idle loop
+var flg_clear = 0;      // default CLEAR behaviour [0,1] 1 --> issue CLEAR command at each loop, clearing all cookies. Speed up performances, but prevents login and session management 
 
 var retcode;
 var action, params;
 var download_folder, fullname_cmd, os;
 
-var filename_cmd 	= "command.csv"; 	// input file for command to be executed
-var filename_retcode 	= "return_code.txt";	// output file for return code and msg
-var filename_dump 	= "output.htm";		// output file for html dump
+var filename_cmd     = "command.csv"; 	  // input file for command to be executed
+var filename_retcode = "return_code.txt"; // output file for return code and msg
+var filename_dump    = "output.htm";	  // output file for html dump
 
 // valorize global variables
 os = getOS(); // detect operating system
@@ -31,7 +31,7 @@ var ancora;
 iimDisplay("Starting loop");
 
 iimPlayCode("FILEDELETE NAME="+download_folder+filename_retcode); // remove retcode file
-iimPlayCode("FILEDELETE NAME="+download_folder+filename_cmd); // remove command file
+iimPlayCode("FILEDELETE NAME="+download_folder+filename_cmd);     // remove command file
 
 iimSet("DUMP_TYPE",dump_type); // {TXT,HTM,CPL,BMP,JPEG,PNG}
 
@@ -62,15 +62,15 @@ while (ancora) {
 
 // *****
 function ticFunction() {
-// 0; // continue looping, no command found
-// ??? // from run_cmd:
+//  0; // continue looping, no command found
+// ??? // from run_cmd (not blocking errors):
 // 	1; // command executed correctly
 // 	2; // macro error
 // 	3; // unknown internal param
-// 	-1; // end loop request
-// 	-2; // unknown action requested
+// 	4; // error dumping web page
+// -1; // end loop request
+// -2; // unknown action requested
 // -3; // error reading command
-// -4; // error dumping web page
 
 // 1) first execute command
 if (check_file_esists(fullname_cmd)) {
@@ -101,15 +101,16 @@ if ( (retcode  == 1) || (retcode == 2) ) {
 	//    but exited with an error
 	iimSet("OUT_FILENAME",filename_dump);
 	iimSet("DUMP_TYPE",dump_type);
-	retcode2 = iimPlay("iw/iw_dump_html");
+	iimPlayCode("FILEDELETE NAME="+download_folder+filename_dump); // remove dumped page file to ensure future feedback is the intended one
+	retcode2 = iimPlay("iw/iw_dump_page");
 	if (retcode2 < 0)
 	{ 
-		alert(iimGetLastError());
-		return [-4, 'Error dumping web page']; // error dumping web page
+		iimDisplay(iimGetLastError());
+		return [4, 'Error dumping web page ('+retcode2+')']; // error dumping web page
 	}
 }
 
-return [retcode, retmsg]; // command executed, continue looping
+return [retcode, retmsg];
 } // end function
 
 
@@ -125,21 +126,22 @@ iimPlay('iw/iw_pause');
 
 // *****
 function run_cmd(action,params) {
-// 1; // macro executed correctly
-// 2; // macro error
-// -1; // end loop request
+//  1; // macro executed correctly (run action)
+//  2; // macro error (run action)
+//  3; // unknown internal param (set_param action)
+// -1; // end loop request (stop action)
 // -2; // unknown action
 			
 iimDisplay("found action \""+action+"\"  with params \""+params + "\"");
 switch(action) {
     case "stop":
 	    iimDisplay("Stopping loop");
-	    
         return [-1, 'End loop request']; // end loop request
         break;
+		
     case "run":
-    		var res = params.split("|&");
-    		for (i = 1; i < res.length; i++) {
+		var res = params.split("|&");
+		for (i = 1; i < res.length; i++) {
 			res2 = res[i].split("|=");
 			variab = res2[0];
 			value  = res2[1];
@@ -158,17 +160,16 @@ switch(action) {
 			// retcode = 1 //default return code for correct execution is 1
 		}
 		break;
+		
     case "set_param":
-    		var res = params.split("|&");
-    		//alert("-->"+res.length);
-    		for (i = 0; i < res.length; i++) {
-    			//alert(params+"-->"+es[i]);
+		var res = params.split("|&");
+		for (i = 0; i < res.length; i++) {
 			res2 = res[i].split("|=");
 			variab = res2[0];
 			value  = res2[1];
 			
 			switch (variab) {
-			case "dump_type": // web page dump type (iw_dump_html)
+			case "dump_type": // web page dump type (iw_dump_page)
 				dump_type = value;
 				break;
 			case "pause_time":
@@ -178,19 +179,22 @@ switch(action) {
 				flg_clear = Number(value);
 				break
 			default:
-        			return [3, 'Unknown internal param']; // unknown internal param
-        		}
+				return [3, 'Unknown internal param']; // unknown internal param
+				//break;
+			}
 		}
 		iimDisplay("Setting params " + params);
 		return [1, 'Params set correctly']
-		// break;
+		
     default:
     	alert("Unknown action " + action + "!");
+		
 	throw new Error("Unknown action " + action + "!");
         return [-2, 'Unknown action requested']; // unknown action requested
 }
 return [retcode, 'Action performed correctly'];
 } // end function
+
 
 
 // *****
@@ -206,6 +210,7 @@ if (ret >= 0) {
     return 0;
 }
 } // end function
+
 
 
 // *****
@@ -250,4 +255,3 @@ if (getOS()== "Windows") {
 return download_folder;
 
 } // end function
-
