@@ -1,0 +1,8 @@
+﻿'input:
+'DUMP_TYPE "TXT"           : {TXT,HTM,CPL,BMP,JPEG,PNG} type of dump
+'OUT_FILENAME "output.htm" : name of dump file
+'
+'SET DUMP_TYPE TXT
+'SET OUT_FILENAME "output.htm"
+
+SAVEAS TYPE={{DUMP_TYPE}} FOLDER=* FILE={{OUT_FILENAME}}

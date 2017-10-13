@@ -1,3 +1,6 @@
-﻿' input:
-' PAUSETIME: [s] time to be waited
+﻿'input:
+'PAUSETIME 1 : [s] time to be waited
+'
+'SET PAUSETIME 1
+
 WAIT SECONDS={{PAUSETIME}}

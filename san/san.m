@@ -14,6 +14,7 @@ function result = san(action,params)
 %
 % % download a whole town (eg Caposele (Nati, Morti, Matrimoni, etc.) )
 % result = san('dnld_town',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/','/home/ceres/StatoCivileSAN/Caposele_Restaurazione/','Caposele','Caposele(provincia di Avellino)'})
+% result = san('dnld_town',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+italiano/Castelnuovo+di+Conza/','/home/ceres/StatoCivileSAN/CastelnuovoDiConza_Italia/','CastelnuovoDiConza','Castelnuovo di Conza'})
 %
 % err_code:
 %   1: problems with iMacros_wrapper
