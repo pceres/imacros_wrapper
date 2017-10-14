@@ -27,6 +27,8 @@ To improve performance, allowing very long runs (many days):
   On a Linux laptop, you can achieve this with the following command: xset -dpms s off
 - disable JavaScript commands in iMacros window. Otherwise, the script becomes slower and slower.
   On the iMacros side tab: Manage --> Settings --> Javascript scripting settings --> uncheck "Show Javascript during replay"
+- disable download history saving, if many downloads have to be done (such as san example). Otherwise history could become
+  so long that clearing becomes impossible.
   
 To open multiple Firefox instances with different profiles, run following prompt commands:
 "C:\Program Files (x86)\Mozilla Firefox\firefox.exe" "imacros://run/?m=iw\imacros_wrapper.js"
