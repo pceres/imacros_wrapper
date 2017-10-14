@@ -792,10 +792,12 @@ result.err_msg = 'Error opening the web page';
 max_count = 5;
 pause_repeated_failure = 10*50; % [s] pause after max_count failures
 
-% regexp special chars to be escaped
+%% regexp special chars to be escaped
 matr_strreplace = {
     '(',    '\(';
     ')',    '\)';
+    '?',    '\?'; % Salerno Italia Castelnuovo Matrimoni 1917 "886, suppl. 2?"
+    '+',    '\+';
     };
 tag_batch0 = tag_batch;
 for i=1:size(matr_strreplace,1)
@@ -804,6 +806,7 @@ for i=1:size(matr_strreplace,1)
     tag_batch0 = strrep(tag_batch0,str1,str2);
 end
 
+%% go to batch page
 ancora = 1;
 count = 0;
 while ancora
