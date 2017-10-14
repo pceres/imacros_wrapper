@@ -797,7 +797,6 @@ matr_strreplace = {
     '(',    '\(';
     ')',    '\)';
     '?',    '\?'; % Salerno Italia Castelnuovo Matrimoni 1917 "886, suppl. 2?"
-    '+',    '\+';
     };
 tag_batch0 = tag_batch;
 for i=1:size(matr_strreplace,1)
