@@ -126,7 +126,7 @@ iimPlay('iw/iw_pause');
 
 // *****
 function run_cmd(action,params) {
-//  1; // macro executed correctly (run action)
+//  1; // macro executed correctly (run or dump action)
 //  2; // macro error (run action)
 //  3; // unknown internal param (set_param action)
 // -1; // end loop request (stop action)
@@ -137,6 +137,10 @@ switch(action) {
     case "stop":
 	    iimDisplay("Stopping loop");
         return [-1, 'End loop request']; // end loop request
+        break;
+		
+    case "dump":
+        return [1, 'dump action, nothing to do here']; // dump request
         break;
 		
     case "run":

@@ -13,6 +13,8 @@ function result = iw(action,varargin)
 %           iw_action:
 %               'stop': no additional param needed. Require
 %                       imacros_wrapper_js looping stop.
+%               'dump': no additional param needed. Dump current web page. This is needed in 
+%                       case of web pages that evolve in time.
 %               'run' : param_struct param needed. Require iMacros macro
 %                       execution. macro params are defined in the
 %                       param_struct, with the form struct(timeout_fdbk,param1_name,param1_value,...)
@@ -86,6 +88,7 @@ function result = iw(action,varargin)
 % result = iw('write_cmd',{'set_param',struct('dump_type','HTM')}) % 'TXT','CPL','TXT','HTM','BMP','PNG','JPEG'
 % result = iw('write_cmd',{'set_param',struct('pause_time','0.5')})
 % result = iw('write_cmd',{'set_param',struct('flg_clear','1')})
+% result = iw('write_cmd',{'dump'});
 % result = iw('read_fdbk',{''})
 % result = iw('iMacros_rootfolder',{});folder = result.folder
 % result = iw('write_cmd',{'set_param',struct('pause_time','0.2')})
@@ -370,6 +373,9 @@ switch action
     case 'stop'
         cmd_line = 'stop,';
         
+    case 'dump'
+        cmd_line = 'dump,';
+        
     case 'set_param'
         param_struct = params{1};
         ks_params = struct_to_string(param_struct,str_separ);
@@ -392,7 +398,7 @@ if (err_code == 0)
     [err_code err_msg] = write_and_wait_fdbk(text,fullname_cmd,fullname_retcode,timeout_fdbk);
     
     if (err_code == -1)
-        % override strange run error management in case of success (no error --> 0)
+        % override iMacros strange run error management in case of success (no error --> 0)
         err_code = 0;
     end
 end
