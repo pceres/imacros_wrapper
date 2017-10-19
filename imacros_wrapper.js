@@ -5,13 +5,24 @@ var dump_type = "TXT";  // {TXT,HTM,CPL,BMP,JPEG,PNG} default web page dump type
 var pause_time = 1;     // default pause in idle loop
 var flg_clear = 0;      // default CLEAR behaviour [0,1] 1 --> issue CLEAR command at each loop, clearing all cookies. Speed up performances, but prevents login and session management 
 
+var filename_lockref    = "lockfile@@.txt";    // reference lock file. It also receives the lock from iw
+var filename_cmdref     = "command@@.csv";     // reference input file for command to be executed
+var filename_retcoderef = "return_code@@.txt"; // reference output file for return code and msg
+var filename_dumpref    = "dump@@.txt";        // reference output file for html dump
+
 var retcode;
 var action, params;
 var download_folder, fullname_cmd, os;
 
-var filename_cmd     = "command.csv"; 	  // input file for command to be executed
-var filename_retcode = "return_code.txt"; // output file for return code and msg
-var filename_dump    = "output.htm";	  // output file for html dump
+// init session (define sid)
+result = init_session();
+sid           = result[0];
+filename_lock = result[1];
+
+// generate filenames with sid
+filename_cmd     = generate_filename_with_sid(filename_cmdref,sid);
+filename_retcode = generate_filename_with_sid(filename_retcoderef,sid);
+filename_dump    = generate_filename_with_sid(filename_dumpref,sid);
 
 // valorize global variables
 os = getOS(); // detect operating system
@@ -19,12 +30,15 @@ download_folder = detect_iMacros_downdload_folder(); // detect root folder for i
 fullname_cmd = download_folder+filename_cmd; 	// fullname for file used to pass command to iMacros wrapper
 
 // run infinite loop
-myLoop();
+myLoop(sid);
+
+// close session
+close_session(sid);
 
 
 
 // *****
-function myLoop() {
+function myLoop(sid) {
 
 var ancora;
 
@@ -41,9 +55,9 @@ while (ancora) {
 		iimPlayCode("CLEAR"); // clear all cookies, but this prevents login and session management
 	}
 	result = ticFunction();
-	do_pause(pause_time);
 	code = result[0];
 	errmsg = result[1];
+	do_pause(pause_time);
 	if (code != 0 ) {
 		// some action was performed
     		var now = new Date();
@@ -257,5 +271,71 @@ if (getOS()== "Windows") {
 	download_folder =  download_folder + "/";
 }
 return download_folder;
+
+} // end function
+
+
+
+// *****
+function init_session(default_sid) {
+// define the unique sid value, and create the lock file
+var default_sid = '_100';
+var ancora;
+
+ancora = 1;
+sid = default_sid;
+
+while (ancora) {
+	filename_lock = generate_filename_with_sid(filename_lockref,sid);
+	fullname_lock = download_folder + filename_lock;
+
+	// check for fullname_lock existence
+	iimSet('LOCK_FILENAME',fullname_lock);
+	retcode = iimPlayCode("CMDLINE !DATASOURCE {{LOCK_FILENAME}}");
+	if (retcode == -930) {
+		ancora = 0;
+		//alert(fullname_lock + ' does not exist');
+	} else {
+		var min = 0;
+		var max = 999;
+		var num_sid =  Math.round(Math.random() * (max - min) + min);
+		var sid = '_' + num_sid;
+		//alert(fullname_lock + ' exists:' + retcode + '. New sid: ' + sid);
+	}
+}
+
+// create lock file
+iimSet('LOCK_FILENAME',filename_lock);
+iimPlayCode("SET !EXTRACT lock\nSAVEAS TYPE=EXTRACT FOLDER=* FILE={{LOCK_FILENAME}}");
+
+return [sid, filename_lock];
+} // end function
+
+
+
+// *****
+function close_session(sid) {
+// remove the lockfile
+
+filename_lock = generate_filename_with_sid(filename_lockref,sid);
+fullname_lock = download_folder + filename_lock;
+
+// remove the file
+iimSet('LOCK_FILENAME',filename_lock);
+retcode = iimPlayCode("FILEDELETE NAME={{LOCK_FILENAME}}");
+if (retcode != 1) {
+	var error_msg = retcode + ": " + iimGetLastError();
+	iimDisplay(error_msg);
+}
+
+} // end function
+
+
+// *****
+function generate_filename_with_sid(filename_ref,sid) {
+// generate the filename merging the reference name and the sid info
+
+filename = filename_ref.replace(/@@/g,sid); // replace @@ special string with the sid
+return filename;
 
 } // end function

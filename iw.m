@@ -6,10 +6,25 @@ function result = iw(action,varargin)
 %
 % input:
 %   action :
-%       'write_cmd': require a command to imacros_wrapper.js.
+%       'grab_session' : detect available iMacros wrapper sessions, and lock one
+%                        No additional param needed.
+%                        Additional output fields:
+%                        'sid': detected session id strng (empty string is
+%                               a valid sid), or '<error>' in case of error
+%       'release_session' : release the iMacros wrapper session
+%                           It must be followed by a cell array in the form
+%                           {sid} where
+%           sid: session id to pair with a specific session of
+%                imacros_wrapper. Use '' if there is only one session
+%                        Additional output fields:
+%                        'sid': detected session id strng (empty string is
+%                               a valid sid), or '<error>' in case of error
+%       'write_cmd': requires a command to imacros_wrapper.js.
 %                    No additional output fields.
 %                    It must be followed by a cell array in the form
-%                    {iw_action[,additional params]} where
+%                    {sid,iw_action[,additional params]} where
+%           sid: session id to pair with a specific session of
+%                imacros_wrapper. Use '' if there is only one session
 %           iw_action:
 %               'stop': no additional param needed. Require
 %                       imacros_wrapper_js looping stop.
@@ -39,12 +54,13 @@ function result = iw(action,varargin)
 %                                    session management
 %       'read_fdbk': read web page dump.
 %                    It must be followed by a cell array in the form
-%                    {filename} where
+%                    {sid,filename} where
+%                       sid     : session id to pair with a specific session of
+%                                 imacros_wrapper. Use '' if there is only one session
 %                       filename: name of the dump filename. Empty for default dump
 %                                 file (output.csv')
 %                    Additional output fields:
 %                    'dump': txt or html code from dumped web page.
-%                    Action input must be followed by no other params
 %       'log': show lod msg
 %              cell array Params are in the form: {msg,debug}, where
 %           msg: log message
@@ -84,33 +100,37 @@ function result = iw(action,varargin)
 %
 % % es.:
 % result = iw('config_iw',{'debug',1})
-% result = iw('write_cmd',{'run','iw/iw_test/Google',6,struct('SEARCHSTRING','Genealogia di Caposele')})
-% result = iw('write_cmd',{'set_param',struct('dump_type','HTM')}) % 'TXT','CPL','TXT','HTM','BMP','PNG','JPEG'
-% result = iw('write_cmd',{'set_param',struct('pause_time','0.5')})
-% result = iw('write_cmd',{'set_param',struct('flg_clear','1')})
-% result = iw('write_cmd',{'dump'});
-% result = iw('read_fdbk',{''})
+% result = iw('grab_session'); sid = result.sid; % sid = '' for single session operation
+% result = iw('write_cmd',{sid,'run','iw/iw_test/Google',6,struct('SEARCHSTRING','Genealogia di Caposele')})
+% result = iw('write_cmd',{sid,'set_param',struct('dump_type','HTM')}) % 'TXT','CPL','TXT','HTM','BMP','PNG','JPEG'
+% result = iw('write_cmd',{sid,'set_param',struct('pause_time','0.5')})
+% result = iw('write_cmd',{sid,'set_param',struct('flg_clear','1')})
+% result = iw('write_cmd',{sid,'dump'});
+% result = iw('read_fdbk',{sid,''})
 % result = iw('iMacros_rootfolder',{});folder = result.folder
 % result = iw('write_cmd',{'set_param',struct('pause_time','0.2')})
 % result = iw('log',{'this is a debug msg',1})
 % result = iw('pause_rnd',{4,1})    % random pause (avg = 4 s, std dev = 1 s)
 % result = iw('rnd_item',{{'ciao','hello','salve'}})
 % result = iw('ask_for_human',{4})  % wait for human interaction for 4 s
-% result = iw('write_cmd',{'stop'}) % stop iMacros wrapper infinite loop
+% result = iw('write_cmd',{sid,'stop'}) % stop iMacros wrapper infinite loop
+% result = iw('release_session',{sid});
 %
 % % build a search string ranking
-% result = iw('write_cmd',{'set_param',struct('pause_time','0.5','dump_type','TXT')})
+% result = iw('grab_session'); sid = result.sid; % sid = '' for single session operation
+% result = iw('write_cmd',{sid,'set_param',struct('pause_time','0.5','dump_type','TXT')})
 % list = {'Fiat','Chrysler','FCA','Volkswagen','Toyota'}';
 % for i=1:size(list,1);
-%   result = iw('write_cmd',{'run','iw/iw_test/Google',6,struct('SEARCHSTRING',list{i,1})})
-%   result = iw('read_fdbk',{''})
+%   result = iw('write_cmd',{sid,'run','iw/iw_test/Google',6,struct('SEARCHSTRING',list{i,1})})
+%   result = iw('read_fdbk',{sid,''})
 %   z=regexp(result.text,'Circa ([0-9\.]+) risultati','tokens');if isempty(z),num_pages=NaN;else,num_pages=str2double(strrep(z{1}{1},'.',''));end,list{i,2}=num_pages;
 % end
-% result = iw('write_cmd',{'stop'})
+% result = iw('write_cmd',{sid,'stop'})
 % [temp ind] = sort(-cell2mat(list(:,2)));list=list(ind,:);format long;disp('Classifica delle stringhe di ricerca:');disp(list);format short
 % bar(cell2mat(list(:,2)));mx=max(cell2mat(list(:,2)));grid on;ylabel('Google hits');title(['Logo ranking - ' datestr(now,'mmm dd, yyyy')]);for i=1:size(list,1),val=list{i,2};tag=list{i,1};text(i-length(tag)/25,val+mx/30,tag);end;
 % tag_list = ['list' datestr(now,'yyyy_mm_dd')];filename_arc='logo_arc.mat';if exist(filename_arc,'file'),z=load(filename_arc);else z=struct();end;z.(tag_list)=list;save(filename_arc,'-struct','z');
 % list=fieldnames(z);z_=regexp(list,'[0-9]+_[0-9]+_[0-9]+','match');z2=[z_{:}]';v_day=datenum(z2,'yyyy_mm_dd');bulk=[];figure(99),hold on,grid on,title('Number of Google results in time');for i_day = 1:length(list),tag=list{i_day};str=z.(tag);[tmp ind]=sort(str(:,1));str=str(ind,:);leg=str(:,1);bulk=[bulk cell2mat(str(:,2))];end;num_days=length(list);color='bgrkmc';for i_logo=1:size(bulk,1),plot(v_day,bulk(i_logo,:),['.-' color(i_logo)]),end,legend(leg,'Location','best'),   set(gca,'XTickLabel',''),p=get(gca,'position');p(2)=p(2)+.1; p(4)=p(4)-.1;set(gca,'position',p);text(v_day,zeros(1,length(list))-0,z2,'rotation',90,'horizontal','right','interpreter','none'),legend(leg,'Location','Best')
+% result = iw('release_session',{sid});
 %
 % % automatize image download from a website
 % result = san('dnld_typology',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/Matrimoni/','Caposele_Matrimoni','Matrimoni'})
@@ -138,8 +158,15 @@ function result = iw(action,varargin)
 % 1; % wrong parameter name
 % 2; % wrong parameter value
 %
+% error codes for grab_session action:
+% 1; % no iMacros wrapper session available
+% 2; % all iMacros wrapper sessions are busy
+%
+% error codes for release_session action:
+% 1; % lock file not found for session <sid>: <lockfile>
+% 2; % session <sid> was already unlocked
 
-if ismember(action,{'write_cmd','read_fdbk','log','pause_rnd','rnd_item','reset_fdbk','ask_for_human','iMacros_rootfolder','config_iw'})
+if ismember(action,{'grab_session','write_cmd','read_fdbk','log','pause_rnd','rnd_item','reset_fdbk','ask_for_human','iMacros_rootfolder','config_iw','release_session'})
     result = perform_action(action,varargin);
 else
     error('Unknown action %s!',action)
@@ -147,7 +174,7 @@ end
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function result = perform_action(action,varargin)
 
 err_code = 0;
@@ -155,18 +182,28 @@ err_msg = '';
 result = struct();
 
 switch action
+    case 'grab_session'
+        result0 = grab_session();
+        result = result0; % overwrite err_code, also for negative values
+        err_code = result0.err_code;
+        err_msg  = result0.err_msg;
     case 'write_cmd'
-        iMacros_name = varargin{1}{1}{1};
-        params       = varargin{1}{1}(2:end);
-        result0 = write_cmd(iMacros_name,params);
+        sid       = varargin{1}{1}{1};
+        iw_action = varargin{1}{1}{2};
+        params    = varargin{1}{1}(3:end);
+        result0 = write_cmd(sid,iw_action,params);
         result = result0; % overwrite err_code, also for negative values
         err_code = result0.err_code;
         err_msg  = result0.err_msg;
     case 'read_fdbk'
-        filename = varargin{1}{1}{1};
-        result0 = read_fdbk(filename);
+        sid      = varargin{1}{1}{1};
+        filename = varargin{1}{1}{2};
+        result0  = read_fdbk(sid,filename);
         result.text = result0.text;
         result.filename_read = result0.filename_read;
+    case 'release_session'
+        sid = varargin{1}{1}{1};
+        result0 = release_session(sid);
     otherwise
         % service actions (those that don't interact directly with iMacros)
         params = varargin;
@@ -184,7 +221,7 @@ result.err_msg = err_msg;
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [result result0] = service_actions(action,params,result)
 
 switch action
@@ -222,7 +259,7 @@ end
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function result = config_iw(param_name,param_value)
 % err_code:
 % 1; % wrong parameter name
@@ -254,7 +291,7 @@ result.err_msg  = err_msg;
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function item = rnd_item(list)
 
 n = length(list);
@@ -263,7 +300,7 @@ item = list{ind};
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function log(msg,debug)
 
 if debug
@@ -272,7 +309,7 @@ end
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function result = pause_rnd(avg_time,st_dev)
 
 err_code = 0;
@@ -288,18 +325,18 @@ result.t_pause = t_pause;
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function result = read_fdbk(filename)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function result = read_fdbk(sid,filename_dump)
 
 err_code = 0;
 err_msg = 0;
 
-if isempty(filename)
+if isempty(filename_dump)
     % default iw dump file
-    filename = 'output.htm';
+    [temp, filename_dump] = get_filenameref('dump',sid); %#ok<ASGLU>
 end
 
-filename_read = [iMacros_rootfolder() 'Downloads' filesep filename];
+filename_read = filename_to_iMacros_dld_fullname(filename_dump);
 
 z = dir(filename_read);
 
@@ -320,7 +357,7 @@ result.filename_read = filename_read;
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function reset_fdbk()
 
 [temp, filename_read] = read_fdbk(); %#ok<ASGLU>
@@ -329,8 +366,8 @@ delete(filename_read);
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function result = write_cmd(action,params)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function result = write_cmd(sid,action,params)
 % error codes for write_cmd action:
 % 0; % command executed correctly
 % 1; % end loop request
@@ -351,8 +388,8 @@ err_code = 0;
 err_msg = 0;
 result = struct();
 
-fullname_retcode = [iMacros_rootfolder() 'Downloads' filesep 'return_code.txt']; % output file for return code and msg
-fullname_cmd = [iMacros_rootfolder() 'Downloads' filesep 'command.csv'];
+fullname_retcode = get_filenameref('retcode',sid);
+fullname_cmd = get_filenameref('cmd',sid);
 header_line = 'ACTION,PARAMS';
 timeout_fdbk = 6; % [s]
 
@@ -408,7 +445,7 @@ result.err_msg = err_msg;
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function str_iw = init_str_iw(str_iw)
 
 matr_default = {
@@ -429,7 +466,7 @@ end
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function ks_params = struct_to_string(param_struct,str_separ)
 
 list = fieldnames(param_struct);
@@ -442,7 +479,7 @@ ks_params = ks_params(1:end-2);
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [err_code err_msg] = write_and_wait_fdbk(text,fullname_cmd,fullname_retcode,timeout_fdbk)
 
 % get timestamp
@@ -491,7 +528,7 @@ end
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [err_code err_msg] = get_fdbk_from_text(txt)
 
 z = strtrim(regexp(txt,'[\r\n][^\r\n]+[\r\n]*$','match')); % read last line
@@ -514,7 +551,7 @@ end
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function result = ask_for_human(timeout)
 
 err_code = 0;
@@ -561,7 +598,7 @@ result.flg_return = flg_return;
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function rootfolder = iMacros_rootfolder()
 
 if isunix
@@ -572,3 +609,147 @@ else
     home = getenv('USERPROFILE');
     rootfolder = [home '\Documents\iMacros\'];
 end
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [fullname filename] = get_filenameref(filetype,sid)
+
+switch filetype
+    case 'lock'
+        % lock file. It also receives the lock from iw
+        filenameref = 'lockfile@@.txt';
+    case 'cmd'
+        % file containing the command to be executed by iMacros wrapper
+        filenameref = 'command@@.csv';
+    case 'retcode'
+        % file containing the return code from iMacros wrapper
+        filenameref = 'return_code@@.txt';
+    case 'dump'
+        % file containing the web page dump
+        filenameref = 'dump@@.txt';
+    otherwise
+        error('Unknown file type %s',filetype)
+end
+
+filename = strrep(filenameref,'@@',sid);
+fullname = filename_to_iMacros_dld_fullname(filename);
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function fullname = filename_to_iMacros_dld_fullname(filename)
+
+fullname = [iMacros_rootfolder() 'Downloads' filesep filename]; % file inside the iMacros download folder
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function result = grab_session()
+% locate free iMacros wrapper session, and lock it
+%
+% err_code:
+% 1; % no iMacros wrapper session available
+% 2; % all iMacros wrapper sessions are busy
+%
+
+err_code = 0;
+err_msg  = '';
+
+fullname_lock = get_filenameref('lock','*');
+folder_dld = fileparts(fullname_lock);
+z_lock = dir(fullname_lock); % list current lockfiles
+
+if isempty(z_lock)
+    err_code = 1;
+    err_msg  = 'no iMacros wrapper session available';
+    sid = '<error>';
+else
+    ancora = 1;
+    i_lock = 1;
+    while ancora
+        filename_lock_i = z_lock(i_lock).name;
+        fullname_lock_i = [folder_dld filesep filename_lock_i];
+        numbytes = z_lock(i_lock).bytes;
+        fid = fopen(fullname_lock_i, 'r');
+        txt = char(fread(fid, numbytes, 'char')');
+        fclose(fid);
+        
+        flg_available = isempty(regexp(txt,'locked', 'once'));
+        ancora = (flg_available==0) && (i_lock < length(z_lock));
+        i_lock = i_lock+1;
+    end
+    
+    if flg_available
+        z = regexp(filename_lock_i,'(_[0-9]+)\.','tokens');
+        sid = z{1}{1};
+        
+        flg_lock = 1; % lock the session
+        set_lock_state(sid,txt,flg_lock)
+    else
+        err_code = 2;
+        err_msg  = 'all iMacros wrapper sessions are busy';
+        sid = '<error>';
+    end
+end
+
+
+result.err_code = err_code;
+result.err_msg = err_msg;
+result.sid = sid;
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function txt_new = set_lock_state(sid,txt,flg_lock)
+% write lock ('locked')or unlock ('lock') string inside the lockfile, so that no other iw instance will pair with the same session
+
+fullname_lock = get_filenameref('lock',sid);
+
+if flg_lock
+    txt_new = strrep(txt,'"lock"','"locked"');
+else
+    txt_new = strrep(txt,'"locked"','"lock"');
+end
+
+fid = fopen(fullname_lock,'wb');
+fwrite(fid,txt_new,'char');
+fclose(fid);
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function result = release_session(sid)
+% unlock the current session id, leaving the iMacros loop running,
+% available for future sessions
+%
+% err_code:
+% 1; % lock file not found for session <sid>: <lockfile>
+% 2; % session <sid> was already unlocked
+
+err_code = 0;
+err_msg  = '';
+
+fullname_lock = get_filenameref('lock',sid);
+
+% read text inside lockfile
+z = dir(fullname_lock);
+if isempty(z)
+    err_code = 1;
+    err_msg  = sprintf('lock file not found for session %s: %s',sid,fullname_lock);
+else
+    numbytes = z.bytes;
+    fid = fopen(fullname_lock, 'r');
+    txt = char(fread(fid, numbytes, 'char')');
+    fclose(fid);
+    
+    flg_lock = 0; % unlock the session
+    txt_new = set_lock_state(sid,txt,flg_lock);
+    if isequal(txt,txt_new)
+        err_code = 2;
+        err_msg  = sprintf('session %s was already unlocked',sid);
+    end
+end
+
+result.err_code = err_code;
+result.err_msg = err_msg;
