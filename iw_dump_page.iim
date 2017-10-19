@@ -3,6 +3,6 @@
 'OUT_FILENAME "output.htm" : name of dump file
 '
 'SET DUMP_TYPE TXT
-'SET OUT_FILENAME "output.htm"
+'SET OUT_FILENAME "dump.htm"
 
 SAVEAS TYPE={{DUMP_TYPE}} FOLDER=* FILE={{OUT_FILENAME}}

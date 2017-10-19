@@ -614,6 +614,8 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [fullname filename] = get_filenameref(filetype,sid)
+% default filenames. they must be aligned to the names in
+% imacros_wrapper.js
 
 switch filetype
     case 'lock'
@@ -627,7 +629,7 @@ switch filetype
         filenameref = 'return_code@@.txt';
     case 'dump'
         % file containing the web page dump
-        filenameref = 'dump@@.txt';
+        filenameref = 'dump@@.htm';
     otherwise
         error('Unknown file type %s',filetype)
 end
