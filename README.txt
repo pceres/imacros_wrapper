@@ -12,7 +12,8 @@ are taken back and shown in a powerful Matlab bar plot.
 Instructions for set up: 
 - Install the free version of iMacros 8.9.7 (newer versions don't work. See here for downgrading from the latest version: http://wiki.imacros.net/iMacros_for_Firefox#How_to_Downgrade).
 - the tool was tested with the following Firefox-iMacros combinations:
-	+ Firefox (version 56.0.1) & iMacros 8.9.7
+	+ Windows 7: Firefox (version 56.0.1) & iMacros 8.9.7
+	+ Linux Slackware 14.2: Firefox (version 45.2.0) & iMacros 8.9.7
 - Load the files inside the iMacros Macro folder. They should appear in the iMacros toolbar in your browser (tested in Firefox).
 - Run imacros_wrapper.js : an endless loop should start in the browser. 
   This means that the imacros_wrapper is ready to receive automation commands from the Matlab part of the tool.
@@ -26,9 +27,11 @@ To improve performance, allowing very long runs (many days):
   On a Linux laptop, you can achieve this with the following command: xset -dpms s off
 - disable JavaScript commands in iMacros window. Otherwise, the script becomes slower and slower.
   On the iMacros side tab: Manage --> Settings --> Javascript scripting settings --> uncheck "Show Javascript during replay"
-  
+- disable download history saving, if many downloads have to be done (such as san example). Otherwise history could become
+  so long that clearing becomes impossible.
+
 To open multiple Firefox instances with different profiles, run following prompt commands:
 "C:\Program Files (x86)\Mozilla Firefox\firefox.exe" "imacros://run/?m=iw\imacros_wrapper.js"
 "C:\Program Files (x86)\Mozilla Firefox\firefox.exe" -P <profile_2> --no-remote "imacros://run/?m=iw\imacros_wrapper.js"
-...
+
 "C:\Program Files (x86)\Mozilla Firefox\firefox.exe" -P <profile_N> --no-remote "imacros://run/?m=iw\imacros_wrapper.js"
