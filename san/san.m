@@ -43,6 +43,7 @@ err_code = 0;
 err_msg  = '';
 matr_typology = {};
 
+sid = sid_default(); % default sid for single session operation
 flg_dnld = 1; % 0 --> just list, disable download
 
 str = extract_params(params,{'url_town','folder_root','folder_town','tag_town'});
@@ -54,7 +55,7 @@ tag_town    = str.tag_town;     % title of the page
 webfolder_folder = folder_root;
 create_folder_if_needed(webfolder_folder);
 
-result0 = configure_iw();
+result0 = configure_iw(sid);
 if (result0.err_code ~= 0)
     err_code = 1;
     err_msg  = 'problems with iMacros_wrapper';
@@ -123,6 +124,7 @@ err_code = 0;
 err_msg  = '';
 matr_years = {};
 
+sid = sid_default(); % default sid for single session operation
 flg_dnld = 1; % 0 --> just list, disable download
 
 str = extract_params(params,{'url_typology','folder_root','folder_typology','tag_typology'});
@@ -134,7 +136,7 @@ tag_typology    = str.tag_typology;     % title of the page
 webfolder_folder = folder_root;
 create_folder_if_needed(webfolder_folder);
 
-result0 = configure_iw();
+result0 = configure_iw(sid);
 if (result0.err_code ~= 0)
     err_code = 1;
     err_msg  = 'problems with iMacros_wrapper';
@@ -157,7 +159,7 @@ else
             url_year = matr_years{i_year,2};
             
             % get year info (available batches, etc.)
-            matr_buste = detect_year_info(matr_years,url_year,tag_year);
+            matr_buste = detect_year_info(sid,matr_years,url_year,tag_year);
             for i_busta = 1:size(matr_buste,1)
                 tag_busta = matr_buste{i_busta,1};
                 url_busta = matr_buste{i_busta,2};
@@ -214,6 +216,7 @@ err_code = 0;
 err_msg = '';
 result_batch = struct();
 
+sid = sid_default(); % default sid for single session operation
 special_string = '$££$';
 
 str = extract_params(params,{'url_batch','folder_root','folder_batch','tag_batch'});
@@ -222,7 +225,7 @@ folder_root  = ensure_filesep_ending(str.folder_root); % root folder where folde
 folder_batch = str.folder_batch;% folder containing downloaded images
 tag_batch    = str.tag_batch;   % tag of the web page to be checked before proceeding with download
 
-result0 = configure_iw();
+result0 = configure_iw(sid);
 if (result0.err_code ~= 0)
     err_code = 1;
     err_msg  = 'problems with iMacros_wrapper';
@@ -233,7 +236,7 @@ else
     create_folder_if_needed(batch_folder);
     
     % get batch info (number of images, etc.)
-    result0 = detect_batch_info(url_batch,tag_batch,batch_folder,folder_batch,special_string);
+    result0 = detect_batch_info(sid,url_batch,tag_batch,batch_folder,folder_batch,special_string);
     if (result0.err_code ~= 0)
         msg = sprintf('%s: error detecting info for batch',batch_folder);
         disp(['*** ' msg])
@@ -252,7 +255,7 @@ else
         [matr_img_to_dnld list_stored] = detect_images_to_download(batch_folder,matr_img_to_dnld_ref); %#ok<NASGU> list_stored s overwritten by download_batch_loop
         
         % loop to download images in the batch
-        [list_stored list_stored_filename list_dummy_filename list_multiple] = download_batch_loop(matr_img_to_dnld,matr_img_to_dnld_ref,batch_folder,num_figures);
+        [list_stored list_stored_filename list_dummy_filename list_multiple] = download_batch_loop(sid,matr_img_to_dnld,matr_img_to_dnld_ref,batch_folder,num_figures);
         matr_stored = list_to_matr(matr_img_to_dnld_ref,list_stored);
         
         fprintf(1,'Batch %s was downloaded (%d images stored).\n',folder_batch,size(matr_stored,1));
@@ -275,7 +278,7 @@ result.result_batch = result_batch;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function matr_buste = detect_year_info(matr_items,url_item,tag_item)
+function matr_buste = detect_year_info(sid,matr_items,url_item,tag_item)
 
 ind_item = strmatch(tag_item,matr_items(:,1),'exact');
 if ( (size(matr_items,2) > 2) && ~isempty(matr_items{ind_item,3}) )
@@ -283,7 +286,7 @@ if ( (size(matr_items,2) > 2) && ~isempty(matr_items{ind_item,3}) )
     matr_buste = matr_items{ind_item,3};
 else
     % get info from web page
-    result0 = open_batch_page('go_image',url_item,tag_item,tag_item,{});
+    result0 = open_batch_page(sid,'go_image',url_item,tag_item,tag_item,{});
     if (result0.err_code ~= 0)
         % could not open url for year
         fprintf(1,'Error accessing url for item %s: %s\n',tag_item,url_item);
@@ -311,7 +314,7 @@ info_fullname = [webfolder_folder info_matfile];
 [temp matr_items] = load_webfolder_info(info_fullname,tag_webfolder); %#ok<ASGLU>
 
 if ( isempty(matr_items) )
-    result0 = open_batch_page('go_image',url_webfolder,tag_webfolder,tag_webfolder,{});
+    result0 = open_batch_page(sid,'go_image',url_webfolder,tag_webfolder,tag_webfolder,{});
     z = regexp(result0.text,'giTitle">[\r\n]+<a href="([^"]+?)"','tokens');
     if isempty(z)
         err_code = 3;
@@ -401,7 +404,7 @@ end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function result = configure_iw()
+function result = configure_iw(sid)
 
 err_code = 0;
 err_msg  = '';
@@ -411,15 +414,22 @@ flg_clear_cookies = 0;
 st = dbstack;
 [list_fcn{1:length(st)}] = deal(st.name);
 if ( length(strmatch('san',list_fcn,'exact'))==1 )
-    % this is the first call, so onfiguring is needed
-    result = iw('write_cmd',{'set_param',struct('dump_type','HTM')}); % requires dump of web pages in html format
+    % this is the first call, so configuring is needed
+    result = iw('grab_session');
+    sid_new = result.sid;
+    if ~strcmp(sid,sid_new)
+        iw('release_session',{sid_new});
+        error('Todo: you are not using the default session!')
+    end
+    
+    result = iw('write_cmd',{sid,'set_param',struct('dump_type','HTM')}); % requires dump of web pages in html format
     if (result.err_code ~= 0)
         err_code = 1;
         err_msg  = 'problems with iMacros_wrapper';
     else
         % additional configuration to clear
         if flg_clear_cookies
-            result = iw('write_cmd',{'set_param',struct('flg_clear','1')}); %#ok<UNRCH> % clear all cookies, for performance reasons
+            result = iw('write_cmd',{sid,'set_param',struct('flg_clear','1')}); %#ok<UNRCH> % clear all cookies, for performance reasons
             if (result.err_code ~= 0)
                 err_code = 1;
                 err_msg  = 'problems with iMacros_wrapper';
@@ -437,7 +447,7 @@ result.err_msg = err_msg;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function result = detect_batch_info(url_batch,tag_batch,batch_folder,folder_batch,special_string)
+function result = detect_batch_info(sid,url_batch,tag_batch,batch_folder,folder_batch,special_string)
 
 err_code = 0;
 err_msg  = '';
@@ -467,7 +477,7 @@ end
 
 if ( ~flg_fast_result )
     batch_page = 1;
-    result0 = open_batch_page('go_batch',url_batch,'',tag_batch,{batch_page});
+    result0 = open_batch_page(sid,'go_batch',url_batch,'',tag_batch,{batch_page});
     if (result0.err_code ~= 0)
         err_code = 2;
         err_msg  = sprintf('problems accessing web page %s',url_batch);
@@ -485,7 +495,7 @@ if ( ~flg_fast_result )
             ks_num_img_first = z2_first{1}{2}; % it can be different from 1, even if linked to "Immagine 1"
             
             % view first image
-            result0 = open_batch_page('go_image',url_img1,['Immagine<SP>' id_img1],['Immagine ' id_img1],{});
+            result0 = open_batch_page(sid,'go_image',url_img1,['Immagine<SP>' id_img1],['Immagine ' id_img1],{});
             result0_text = result0.text;
             z = regexp(result0_text,'href="([^"]*)" class="last"','tokens');
             url_imglast = z{1}{1}; % piece of anchor tag containing last image url
@@ -497,7 +507,7 @@ if ( ~flg_fast_result )
             url_img_template = regexprep(url_imglast,['_' ks_num_img_last '\.jpg.html'],['_' special_string '\.jpg.html']);
                         
             % view image last
-            result1 = open_batch_page('go_image',url_imglast,'Immagine *','Immagine [0-9]+',{});
+            result1 = open_batch_page(sid,'go_image',url_imglast,'Immagine *','Immagine [0-9]+',{});
             result1_text = result1.text;
             z = regexp(result1_text,'<h1[^>]+>Immagine ([^<]+)</h1>','tokens');
             ks_num_imglast = z{1}{1}; % number of last image
@@ -513,7 +523,7 @@ if ( ~flg_fast_result )
                 % in image id and url: it is needed to detect url for each image
                 disp('Multiple subbatch detected: complete url listing is needed...')
                 fprintf(1,'\tsub_batches: %s..%s\n\tfirst image number: in title %d & in url %d\n\tlast image number: in title %d & in url %d\n',sub_batch_first,sub_batch_last,str2double(id_img1),str2double(ks_num_img_first),num_img,num_img_last_url)
-                result0 = get_img_list(text_batch_first,tag_batch,batch_folder);
+                result0 = get_img_list(sid,text_batch_first,tag_batch,batch_folder);
             else
                 % all images are in the same subbatch, the list can be created
                 % easily
@@ -566,7 +576,7 @@ result.matr_img         = matr_img;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function result = get_img_list(text_batch_first,tag_batch,batch_folder)
+function result = get_img_list(sid,text_batch_first,tag_batch,batch_folder)
 
 err_code = 0;
 err_msg  = '';
@@ -589,7 +599,7 @@ while ancora
         url_batch_next = z{1}{1};
         z=regexp(url_batch_next,'g2_page=([0-9]+)&','tokens');
         expected_batch_page = str2double(z{1}{1});
-        result0 = open_batch_page('go_batch',url_batch_next,'',tag_batch,{expected_batch_page});
+        result0 = open_batch_page(sid,'go_batch',url_batch_next,'',tag_batch,{expected_batch_page});
         if (result0.err_code ~= 0)
             err_code = result0.err_code;
             err_msg  = result0.err_msg;
@@ -639,7 +649,7 @@ result.matr_img = matr_img; % each row has format {img_id, img_url}, with img_id
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [list_stored list_stored_filename list_dummy_filename list_multiple] = download_batch_loop(matr_img_to_dnld,matr_img_to_dnld_ref,batch_folder,num_figures)
+function [list_stored list_stored_filename list_dummy_filename list_multiple] = download_batch_loop(sid,matr_img_to_dnld,matr_img_to_dnld_ref,batch_folder,num_figures)
 
 max_img_retries = 3; % number of attempts to download an image
 max_loop_count  = 5; % after so many attempts, it could be a real duplicated image!
@@ -676,7 +686,7 @@ if flg_do_check
             ancora_img = 1;
             count_img = 0;
             while ancora_img
-                flg_ok = download_img(i_img,url_img,dnld_file,batch_folder,num_figures);
+                flg_ok = download_img(sid,i_img,url_img,dnld_file,batch_folder,num_figures);
                 ancora_img = (flg_ok==0) && (count_img<max_img_retries);
                 count_img = count_img+1;
             end
@@ -771,7 +781,7 @@ end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function result = open_batch_page(imacro,url_batch,page_title,tag_batch,params)
+function result = open_batch_page(sid,imacro,url_batch,page_title,tag_batch,params)
 % imacro        name of macro to be called {'go_image','go_batch'}
 % url_batch     url to be displayed
 % page_title    name of page title to be checked by macro
@@ -781,7 +791,6 @@ function result = open_batch_page(imacro,url_batch,page_title,tag_batch,params)
 % 0: No error
 % 1: Error opening the web page
 % 2: Image is missing from website
-
 
 % default return struct, in case it is not rewritten by the correct
 % return value for the downloaded page
@@ -809,8 +818,8 @@ end
 ancora = 1;
 count = 0;
 while ancora
-    result = iw('write_cmd',{'run',['iw/san/' imacro],8,struct('URL',url_batch,'TITLE',page_title)});
-    result0 = iw('read_fdbk',{''});
+    result = iw('write_cmd',{sid,'run',['iw/san/' imacro],8,struct('URL',url_batch,'TITLE',page_title)});
+    result0 = iw('read_fdbk',{sid,''});
     if result.err_code == 0
         result.text = result0.text;
         if isempty(regexp(result0.text,['<h1[^>]*class="title"[^>]*>' tag_batch0 '</h1>'], 'once'))
@@ -1108,12 +1117,12 @@ end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function flg_ok = download_img(ind_img,url_img,dnld_file,batch_folder,num_figures)
+function flg_ok = download_img(sid,ind_img,url_img,dnld_file,batch_folder,num_figures)
 
 flg_ok = 0;
 
 bytes_thr = 5e5; % [bytes] min size to accept image as ok
-bytes_thr2 = 3e5; % last attempt for small images
+bytes_thr2 = 2.5e5; % last attempt for small images
 
 z = regexp(url_img,'[0-9_]*\.jpg','match');
 name_img = z{1}; % es. 005680090_00003.jpg
@@ -1123,15 +1132,15 @@ img_file = [batch_folder name_img]; % es. /home/ceres/iMacros/Downloads/Caposele
 % (subbatches always start from 1)
 img_file = regexprep(img_file,'_[0-9]+\.',['_' sprintf(['%0' num2str(num_figures) 'd'],ind_img) '\.']);
 
-result0 = open_batch_page('go_image',url_img,['Immagine<SP>' num2str(ind_img)],['Immagine ' num2str(ind_img)],{});
+result0 = open_batch_page(sid,'go_image',url_img,['Immagine<SP>' num2str(ind_img)],['Immagine ' num2str(ind_img)],{});
 if ( result0.err_code == 0 )
     % image was downloaded correctly
-    result0 = iw('write_cmd',{'run','iw/san/zoom_image',8,struct()});
+    result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',8,struct()});
     if (result0.err_code ~= 0)
         fprintf(1,'%d: %s\n',result0.err_code,result0.err_msg)
     end
     
-    try_movefile = wait_for_downloaded_file(dnld_file,bytes_thr,bytes_thr2);
+    try_movefile = wait_for_downloaded_file(sid,dnld_file,bytes_thr,bytes_thr2);
     if try_movefile
         movefile(dnld_file,img_file);
         
@@ -1152,11 +1161,11 @@ end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function try_movefile = wait_for_downloaded_file(dnld_file,bytes_thr,bytes_thr2)
+function try_movefile = wait_for_downloaded_file(sid,dnld_file,bytes_thr,bytes_thr2)
 
 try_movefile = 0;
 
-max_count = 10;
+max_count = 5;
 
 z = dir(dnld_file);
 count = 0;
@@ -1168,7 +1177,7 @@ while ( (isempty(z) || (z(1).bytes < bytes_thr)) && (count < max_count) )
 end
 if (count>=max_count)
     % repeat zoom macro
-    result0 = iw('write_cmd',{'run','iw/san/zoom_image',8,struct()});
+    result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',8,struct()});
     if (result0.err_code ~= 0)
         fprintf(1,'%d: %s\n',result0.err_code,result0.err_msg)
     end
@@ -1304,3 +1313,14 @@ function folder = ensure_filesep_ending(folder)
 if ~strcmp(folder(end),filesep)
     folder(end+1) = filesep;
 end
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function sid = sid_default()
+% default sid set by imacros_wrapper.js
+% this is the sid used by iMacros wrapper when the first session is
+% started. In case of single session, then, you can safely use this sid
+
+sid = '';
+

@@ -8,11 +8,15 @@ var flg_clear = 0;      // default CLEAR behaviour [0,1] 1 --> issue CLEAR comma
 var filename_lockref    = "lockfile@@.txt";    // reference lock file. It also receives the lock from iw
 var filename_cmdref     = "command@@.csv";     // reference input file for command to be executed
 var filename_retcoderef = "return_code@@.txt"; // reference output file for return code and msg
-var filename_dumpref    = "dump@@.txt";        // reference output file for html dump
+var filename_dumpref    = "dump@@.htm";        // reference output file for html dump
 
 var retcode;
 var action, params;
 var download_folder, fullname_cmd, os;
+
+// valorize first global variables
+os = getOS(); // detect operating system
+download_folder = detect_iMacros_downdload_folder(); // detect root folder for iMacros
 
 // init session (define sid)
 result = init_session();
@@ -24,10 +28,9 @@ filename_cmd     = generate_filename_with_sid(filename_cmdref,sid);
 filename_retcode = generate_filename_with_sid(filename_retcoderef,sid);
 filename_dump    = generate_filename_with_sid(filename_dumpref,sid);
 
-// valorize global variables
-os = getOS(); // detect operating system
-download_folder = detect_iMacros_downdload_folder(); // detect root folder for iMacros
+// valorize other global variables
 fullname_cmd = download_folder+filename_cmd; 	// fullname for file used to pass command to iMacros wrapper
+
 
 // run infinite loop
 myLoop(sid);
@@ -60,8 +63,8 @@ while (ancora) {
 	do_pause(pause_time);
 	if (code != 0 ) {
 		// some action was performed
-    		var now = new Date();
-    		iimSet('TIMESTAMP',now.toLocaleString());
+			var now = new Date();
+			iimSet('TIMESTAMP',now.toLocaleString());
 		iimSet('RETURN_CODE',-code); // code in iw.m have an inverted sign
 		iimSet('RETURN_MSG',errmsg);
 		iimSet('DEST_FILENAME',filename_retcode);
@@ -279,7 +282,7 @@ return download_folder;
 // *****
 function init_session(default_sid) {
 // define the unique sid value, and create the lock file
-var default_sid = '_100';
+var default_sid = '';
 var ancora;
 
 ancora = 1;
