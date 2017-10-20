@@ -43,6 +43,7 @@ err_code = 0;
 err_msg  = '';
 matr_typology = {};
 
+sid = sid_default(); % default sid for single session operation
 flg_dnld = 1; % 0 --> just list, disable download
 
 str = extract_params(params,{'url_town','folder_root','folder_town','tag_town'});
@@ -54,14 +55,14 @@ tag_town    = str.tag_town;     % title of the page
 webfolder_folder = folder_root;
 create_folder_if_needed(webfolder_folder);
 
-result0 = configure_iw();
+result0 = configure_iw(sid);
 if (result0.err_code ~= 0)
     err_code = 1;
     err_msg  = 'problems with iMacros_wrapper';
 else
     % get typology info (available years, etc.)
     info_town_matfile = san_get_config('info_town');
-    result0 = detect_webfolder_info(url_town,tag_town,webfolder_folder,info_town_matfile);
+    result0 = detect_webfolder_info(sid,url_town,tag_town,webfolder_folder,info_town_matfile);
     if (result0.err_code ~= 0)
         err_code = 3;
         err_msg  = sprintf('Error accessing url for tipology %s: %s',tag_town,url_town);
@@ -123,8 +124,8 @@ err_code = 0;
 err_msg  = '';
 matr_years = {};
 
-flg_dnld = 1; % 0 --> just list, disable download
 sid = sid_default(); % default sid for single session operation
+flg_dnld = 1; % 0 --> just list, disable download
 
 str = extract_params(params,{'url_typology','folder_root','folder_typology','tag_typology'});
 url_typology    = str.url_typology;     % url
@@ -135,14 +136,14 @@ tag_typology    = str.tag_typology;     % title of the page
 webfolder_folder = folder_root;
 create_folder_if_needed(webfolder_folder);
 
-result0 = configure_iw();
+result0 = configure_iw(sid);
 if (result0.err_code ~= 0)
     err_code = 1;
     err_msg  = 'problems with iMacros_wrapper';
 else
     % get typology info (available years, etc.)
     info_typology_matfile = san_get_config('info_typology');
-    result0 = detect_webfolder_info(url_typology,tag_typology,webfolder_folder,info_typology_matfile);
+    result0 = detect_webfolder_info(sid,url_typology,tag_typology,webfolder_folder,info_typology_matfile);
     if (result0.err_code ~= 0)
         err_code = 3;
         err_msg  = sprintf('Error accessing url for tipology %s: %s',tag_typology,url_typology);
@@ -224,7 +225,7 @@ folder_root  = ensure_filesep_ending(str.folder_root); % root folder where folde
 folder_batch = str.folder_batch;% folder containing downloaded images
 tag_batch    = str.tag_batch;   % tag of the web page to be checked before proceeding with download
 
-result0 = configure_iw();
+result0 = configure_iw(sid);
 if (result0.err_code ~= 0)
     err_code = 1;
     err_msg  = 'problems with iMacros_wrapper';
@@ -303,7 +304,7 @@ end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function result = detect_webfolder_info(url_webfolder,tag_webfolder,webfolder_folder,info_matfile)
+function result = detect_webfolder_info(sid,url_webfolder,tag_webfolder,webfolder_folder,info_matfile)
 % get webfolder info (available items and corresponding url)
 
 err_code = 0;
@@ -403,18 +404,24 @@ end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function result = configure_iw()
+function result = configure_iw(sid)
 
 err_code = 0;
 err_msg  = '';
 
-sid = sid_default(); % default sid for single session operation
 flg_clear_cookies = 0;
 
 st = dbstack;
 [list_fcn{1:length(st)}] = deal(st.name);
 if ( length(strmatch('san',list_fcn,'exact'))==1 )
-    % this is the first call, so onfiguring is needed
+    % this is the first call, so configuring is needed
+    result = iw('grab_session');
+    sid_new = result.sid;
+    if ~strcmp(sid,sid_new)
+        iw('release_session',{sid_new});
+        error('Todo: you are not using the default session!')
+    end
+    
     result = iw('write_cmd',{sid,'set_param',struct('dump_type','HTM')}); % requires dump of web pages in html format
     if (result.err_code ~= 0)
         err_code = 1;
@@ -1312,6 +1319,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function sid = sid_default()
 % default sid set by imacros_wrapper.js
+% this is the sid used by iMacros wrapper when the first session is
+% started. In case of single session, then, you can safely use this sid
 
-sid = '_100';
-
+sid = '';

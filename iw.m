@@ -684,7 +684,11 @@ else
     
     if flg_available
         z = regexp(filename_lock_i,'(_[0-9]+)\.','tokens');
-        sid = z{1}{1};
+        if isempty(z)
+            sid = '';
+        else
+            sid = z{1}{1};
+        end
         
         flg_lock = 1; % lock the session
         set_lock_state(sid,txt,flg_lock)
