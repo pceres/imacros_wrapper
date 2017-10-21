@@ -16,6 +16,9 @@ function result = san(action,params)
 % result = san('dnld_town',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/','/home/ceres/StatoCivileSAN/Caposele_Restaurazione/','Caposele','Caposele(provincia di Avellino)'})
 % result = san('dnld_town',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+italiano/Castelnuovo+di+Conza/','/home/ceres/StatoCivileSAN/CastelnuovoDiConza_Italia/','CastelnuovoDiConza','Castelnuovo di Conza'})
 %
+% % in case of error, run the following to release the iw session and allow a correct restart
+% result = iw('release_session',{''})
+%
 % err_code:
 %   1: problems with iMacros_wrapper
 %   2: problems accessing web page
@@ -104,6 +107,7 @@ else
         show_town_report(matr_typology)
     end
 end
+iw('release_session',{sid});
 
 result_webfolder = struct();
 result_webfolder.webfolder_folder   = webfolder_folder;
@@ -196,6 +200,7 @@ else
         show_typology_report(matr_years);
     end
 end
+iw('release_session',{sid});
 
 result_webfolder = struct();
 result_webfolder.webfolder_folder   = webfolder_folder;
@@ -269,6 +274,7 @@ else
         result_batch.list_multiple = list_multiple;   % multiple images in the batch (after repeated attempts to remove them)
     end
 end
+iw('release_session',{sid});
 
 result = struct();
 result.err_code = err_code;

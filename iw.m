@@ -691,7 +691,7 @@ else
         end
         
         flg_lock = 1; % lock the session
-        set_lock_state(sid,txt,flg_lock)
+        set_lock_state(sid,txt,flg_lock);
     else
         err_code = 2;
         err_msg  = 'all iMacros wrapper sessions are busy';
