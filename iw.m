@@ -100,7 +100,7 @@ function result = iw(action,varargin)
 %
 % % es.:
 % result = iw('config_iw',{'debug',1})
-% result = iw('grab_session'); sid = result.sid; % sid = '' for single session operation
+% result = iw('grab_session'); sid = result.sid, % sid = '' for single session operation
 % result = iw('write_cmd',{sid,'run','iw/iw_test/Google',6,struct('SEARCHSTRING','Genealogia di Caposele')})
 % result = iw('write_cmd',{sid,'set_param',struct('dump_type','HTM')}) % 'TXT','CPL','TXT','HTM','BMP','PNG','JPEG'
 % result = iw('write_cmd',{sid,'set_param',struct('pause_time','0.5')})
@@ -108,7 +108,7 @@ function result = iw(action,varargin)
 % result = iw('write_cmd',{sid,'dump'});
 % result = iw('read_fdbk',{sid,''})
 % result = iw('iMacros_rootfolder',{});folder = result.folder
-% result = iw('write_cmd',{'set_param',struct('pause_time','0.2')})
+% result = iw('write_cmd',{sid,'set_param',struct('pause_time','0.2')})
 % result = iw('log',{'this is a debug msg',1})
 % result = iw('pause_rnd',{4,1})    % random pause (avg = 4 s, std dev = 1 s)
 % result = iw('rnd_item',{{'ciao','hello','salve'}})
@@ -482,6 +482,9 @@ ks_params = ks_params(1:end-2);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [err_code err_msg] = write_and_wait_fdbk(text,fullname_cmd,fullname_retcode,timeout_fdbk)
 
+% convert from seconds to day (now uses that unit)
+timeout_fdbk_day = timeout_fdbk/60/60/24; % [d]
+
 % get timestamp
 z_old = dir(fullname_retcode);
 
@@ -493,12 +496,12 @@ if (fid>0)
     %% wait for macro execution and read return code
     % wait for retcode
     ancora = 1;
-    tstart = cputime;
+    tstart = now; % [d]
     while ancora
         z_new = dir(fullname_retcode);
         z_cmd = dir(fullname_cmd);
         pause(0.5);
-        flg_no_timeout = cputime-tstart < timeout_fdbk;
+        flg_no_timeout = now-tstart < timeout_fdbk_day; % [d]
         flg_no_feedback = isequal(z_old,z_new) || isempty(z_new);
         flg_iw_no_restart = ~isempty(z_cmd); % is iMacros wrapper is stopped and restarted, command file is deleted. In this case, better to issue a timeout error
         ancora = (flg_no_feedback && flg_no_timeout && flg_iw_no_restart);
