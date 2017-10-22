@@ -428,6 +428,10 @@ if ( length(strmatch('san',list_fcn,'exact'))==1 )
         error('Todo: you are not using the default session!')
     end
     
+    iw('config_iw',{'reset'});
+    iw('config_iw',{'debug',1});
+    iw('config_iw',{'timeout_fdbk',12});
+    
     result = iw('write_cmd',{sid,'set_param',struct('dump_type','HTM')}); % requires dump of web pages in html format
     if (result.err_code ~= 0)
         err_code = 1;
@@ -1127,7 +1131,7 @@ function flg_ok = download_img(sid,ind_img,url_img,dnld_file,batch_folder,num_fi
 
 flg_ok = 0;
 
-bytes_thr = 5e5; % [bytes] min size to accept image as ok
+bytes_thr = 4e5; % [bytes] min size to accept image as ok
 bytes_thr2 = 2.5e5; % last attempt for small images
 
 z = regexp(url_img,'[0-9_]*\.jpg','match');
