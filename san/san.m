@@ -58,8 +58,8 @@ tag_town    = str.tag_town;     % title of the page
 webfolder_folder = folder_root;
 create_folder_if_needed(webfolder_folder);
 
-result0 = configure_iw(sid);
-if (result0.err_code ~= 0)
+result_cfg = configure_iw(sid);
+if (result_cfg.err_code ~= 0)
     err_code = 1;
     err_msg  = 'problems with iMacros_wrapper';
 else
@@ -107,7 +107,6 @@ else
         show_town_report(matr_typology)
     end
 end
-iw('release_session',{sid});
 
 result_webfolder = struct();
 result_webfolder.webfolder_folder   = webfolder_folder;
@@ -140,8 +139,8 @@ tag_typology    = str.tag_typology;     % title of the page
 webfolder_folder = folder_root;
 create_folder_if_needed(webfolder_folder);
 
-result0 = configure_iw(sid);
-if (result0.err_code ~= 0)
+result_cfg = configure_iw(sid);
+if (result_cfg.err_code ~= 0)
     err_code = 1;
     err_msg  = 'problems with iMacros_wrapper';
 else
@@ -200,7 +199,6 @@ else
         show_typology_report(matr_years);
     end
 end
-iw('release_session',{sid});
 
 result_webfolder = struct();
 result_webfolder.webfolder_folder   = webfolder_folder;
@@ -230,8 +228,8 @@ folder_root  = ensure_filesep_ending(str.folder_root); % root folder where folde
 folder_batch = str.folder_batch;% folder containing downloaded images
 tag_batch    = str.tag_batch;   % tag of the web page to be checked before proceeding with download
 
-result0 = configure_iw(sid);
-if (result0.err_code ~= 0)
+result_cfg = configure_iw(sid);
+if (result_cfg.err_code ~= 0)
     err_code = 1;
     err_msg  = 'problems with iMacros_wrapper';
 else
@@ -274,7 +272,6 @@ else
         result_batch.list_multiple = list_multiple;   % multiple images in the batch (after repeated attempts to remove them)
     end
 end
-iw('release_session',{sid});
 
 result = struct();
 result.err_code = err_code;
@@ -428,9 +425,13 @@ if ( length(strmatch('san',list_fcn,'exact'))==1 )
         error('Todo: you are not using the default session!')
     end
     
+    % register clean up object to release the session in case of CTRL-C
+    CleanupObj = onCleanup(@() myCleanupFun(sid));
+    
+    % configure iw
     iw('config_iw',{'reset'});
     iw('config_iw',{'debug',1});
-    iw('config_iw',{'timeout_fdbk',12});
+    iw('config_iw',{'timeout_fdbk',20});
     
     result = iw('write_cmd',{sid,'set_param',struct('dump_type','HTM')}); % requires dump of web pages in html format
     if (result.err_code ~= 0)
@@ -447,12 +448,23 @@ if ( length(strmatch('san',list_fcn,'exact'))==1 )
         end
     end
 else
+    CleanupObj = [];
     % nested call: repeating configuration is not needed
 end
 
 result = struct();
-result.err_code = err_code;
-result.err_msg = err_msg;
+result.err_code   = err_code;
+result.err_msg    = err_msg;
+result.CleanupObj = CleanupObj; % once this object will be destroyed, the cleanup function will be called
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function myCleanupFun(sid)
+% this function is called at the end of main call, or in case of CTRL-C,
+% and releases the iw session id
+
+iw('release_session',{sid});
 
 
 
@@ -828,7 +840,7 @@ end
 ancora = 1;
 count = 0;
 while ancora
-    result = iw('write_cmd',{sid,'run',['iw/san/' imacro],8,struct('URL',url_batch,'TITLE',page_title)});
+    result = iw('write_cmd',{sid,'run',['iw/san/' imacro],16,struct('URL',url_batch,'TITLE',page_title)});
     result0 = iw('read_fdbk',{sid,''});
     if result.err_code == 0
         result.text = result0.text;
@@ -1145,7 +1157,7 @@ img_file = regexprep(img_file,'_[0-9]+\.',['_' sprintf(['%0' num2str(num_figures
 result0 = open_batch_page(sid,'go_image',url_img,['Immagine<SP>' num2str(ind_img)],['Immagine ' num2str(ind_img)],{});
 if ( result0.err_code == 0 )
     % image was downloaded correctly
-    result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',8,struct()});
+    result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',16,struct()});
     if (result0.err_code ~= 0)
         fprintf(1,'%d: %s\n',result0.err_code,result0.err_msg)
     end
@@ -1187,7 +1199,7 @@ while ( (isempty(z) || (z(1).bytes < bytes_thr)) && (count < max_count) )
 end
 if (count>=max_count)
     % repeat zoom macro
-    result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',8,struct()});
+    result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',16,struct()});
     if (result0.err_code ~= 0)
         fprintf(1,'%d: %s\n',result0.err_code,result0.err_msg)
     end

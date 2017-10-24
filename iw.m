@@ -91,7 +91,9 @@ function result = iw(action,varargin)
 %               'debug': with corresponding values 0 (normal behaviour) or
 %                        1 (debug messages)
 %               'timeout_fdbk': [s] timeout when waiting for feedback from
-%                               iMacros wrapper command execution
+%                               iMacros wrapper command execution (except
+%                               for write_cmd-run action, where the timeout
+%                               is indicated explicitly
 %           value: value to be set for parameter param
 %
 % output:
