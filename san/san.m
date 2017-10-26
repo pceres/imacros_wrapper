@@ -840,7 +840,7 @@ end
 ancora = 1;
 count = 0;
 while ancora
-    result = iw('write_cmd',{sid,'run',['iw/san/' imacro],16,struct('URL',url_batch,'TITLE',page_title)});
+    result = iw('write_cmd',{sid,'run',['iw/san/' imacro],get_write_cmd_timeout(),struct('URL',url_batch,'TITLE',page_title)});
     result0 = iw('read_fdbk',{sid,''});
     if result.err_code == 0
         result.text = result0.text;
@@ -881,6 +881,13 @@ while ancora
         pause(1)
     end
 end
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function timeout = get_write_cmd_timeout()
+% timeout to be used for write_cmd iw calls
+timeout = 59;
 
 
 
@@ -1157,7 +1164,7 @@ img_file = regexprep(img_file,'_[0-9]+\.',['_' sprintf(['%0' num2str(num_figures
 result0 = open_batch_page(sid,'go_image',url_img,['Immagine<SP>' num2str(ind_img)],['Immagine ' num2str(ind_img)],{});
 if ( result0.err_code == 0 )
     % image was downloaded correctly
-    result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',16,struct()});
+    result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',get_write_cmd_timeout(),struct()});
     if (result0.err_code ~= 0)
         fprintf(1,'%d: %s\n',result0.err_code,result0.err_msg)
     end
@@ -1199,7 +1206,7 @@ while ( (isempty(z) || (z(1).bytes < bytes_thr)) && (count < max_count) )
 end
 if (count>=max_count)
     % repeat zoom macro
-    result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',16,struct()});
+    result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',get_write_cmd_timeout(),struct()});
     if (result0.err_code ~= 0)
         fprintf(1,'%d: %s\n',result0.err_code,result0.err_msg)
     end
