@@ -2,11 +2,11 @@
 
 // default values for configurable parameters
 var dump_type = "TXT";  // {TXT,HTM,CPL,BMP,JPEG,PNG} default web page dump type
-var pause_time = 1;     // default pause in idle loop
+var pause_time = 1;     // [s] default pause in idle loop
 var flg_clear = 0;      // default CLEAR behaviour [0,1] 1 --> issue CLEAR command at each loop, clearing all cookies. Speed up performances, but prevents login and session management 
 
 var filename_lockref    = "lockfile@@.txt";    // reference lock file. It also receives the lock from iw
-var filename_cmdref     = "command@@.csv";     // reference input file for command to be executed
+var filename_cmdref     = "command@@.csv";     // reference input file for command to be executed, deleted externally by iw
 var filename_retcoderef = "return_code@@.txt"; // reference output file for return code and msg
 var filename_dumpref    = "dump@@.htm";        // reference output file for html dump
 
@@ -320,15 +320,29 @@ return [sid, filename_lock];
 function close_session(sid) {
 // remove the lockfile
 
-filename_lock = generate_filename_with_sid(filename_lockref,sid);
-fullname_lock = download_folder + filename_lock;
+list_fileref = [filename_lockref,filename_dumpref,filename_retcoderef];
 
-// remove the file
-iimSet('LOCK_FILENAME',filename_lock);
-retcode = iimPlayCode("FILEDELETE NAME={{LOCK_FILENAME}}");
-if (retcode != 1) {
-	var error_msg = retcode + ": " + iimGetLastError();
-	iimDisplay(error_msg);
+do_pause(1);
+
+flg_ok = 1;
+num_files = list_fileref.length;
+for (i_file=0; i_file<num_files; i_file++) {
+	fileref_i = list_fileref[i_file];
+
+	filename_i = generate_filename_with_sid(fileref_i,sid);
+
+	// remove the file
+	iimSet('FILENAME_DELETE',filename_i);
+	retcode = iimPlayCode("FILEDELETE NAME={{FILENAME_DELETE}}");
+	if ( (retcode != 1) && (retcode != -1001) ) {
+		flg_ok = 0;
+		var error_msg = retcode + ": " + iimGetLastError();
+		iimDisplay(error_msg);
+	}
+}
+if (flg_ok) {
+	// overwrite file not found error (it is ok if the file was already deleted in advance)
+	iimDisplay('CleanUp completed.');
 }
 
 } // end function

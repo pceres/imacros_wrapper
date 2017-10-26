@@ -17,6 +17,9 @@ flg_force_loading = 1
 
 close all
 
+result = iw('grab_session');
+sid = result.sid;
+
 %% determine target day
 vec_target = ask_user_ks_date(vec_target); % let user change target date
 
@@ -24,7 +27,7 @@ try
     %% login
     result = iw('config_iw',{'debug',0});
     
-    result = iw('write_cmd',{'run','iw/roc/roc_login',10,struct('USERNAME',username,'PASSWORD',password)});
+    result = iw('write_cmd',{sid,'run','iw/roc/roc_login',10,struct('USERNAME',username,'PASSWORD',password)});
     show_error(result);
     if ~isempty(regexp(result.err_msg,'element INPUT specified by ID:sap-user was not found','once'))
         disp('Login was already done')
@@ -33,11 +36,11 @@ try
     %% open calendar week
     [ks_month_tag ks_month_pos ks_day] = determine_cw_pos(vec_target);
     clear result
-    result = iw('write_cmd',{'run','iw/roc/roc_select_cw',10,struct('MONTH_TAG',ks_month_tag,'MONTH_POS',ks_month_pos,'DAY',ks_day)});
+    result = iw('write_cmd',{sid,'run','iw/roc/roc_select_cw',10,struct('MONTH_TAG',ks_month_tag,'MONTH_POS',ks_month_pos,'DAY',ks_day)});
     show_error(result)
     
     %% determine hours to be managed
-    [str_hours, str_status] = analyse_OreROC();
+    [str_hours, str_status] = analyse_OreROC(sid);
     disp(str_status.msg)
     h_cons = str_hours.h_cons;
     h_pres = str_hours.h_pres;
@@ -47,16 +50,16 @@ try
         % there's something to do:
         
         %% manage cw (calendar week) status, reopening it if needed
-        flg_editable = reopen_cw_status(flg_force_loading);
+        flg_editable = reopen_cw_status(sid,flg_force_loading);
         if flg_editable
             %% calculate ROC hours to be entered
             [str_ROC matr_comm] =  calculate_ROC_hours(matr_comm,h_pres);
             clear result
-            result = iw('write_cmd',{'run','iw/roc/roc_enter_hours',15,str_ROC});
+            result = iw('write_cmd',{sid,'run','iw/roc/roc_enter_hours',15,str_ROC});
             show_error(result)
             
             %% check that hours were entrered correctly
-            [str_hours, str_status] = analyse_OreROC();
+            [str_hours, str_status] = analyse_OreROC(sid);
             disp(str_status.msg)
         end
     end
@@ -69,17 +72,19 @@ catch me %#ok<NASGU>
     end
 end
 
+iw('release_session',{sid});
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [str_hours str_status] = analyse_OreROC()
+function [str_hours str_status] = analyse_OreROC(sid)
 % analyse html code from OreROC.txt, saved externally
 
 str_hours   = [];
 str_status  = [];
 
 % read page
-result = iw('read_fdbk',{'OreROC.txt'});
+result = iw('read_fdbk',{sid,'OreROC.txt'});
 
 %% detect ROC hours to be managed
 z = regexp(result.text,'ALTERNATING'',[0-9]+:''[^'']+','match')';
@@ -228,15 +233,15 @@ disp(str_ROC)
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function flg_editable = reopen_cw_status(flg_force_loading)
+function flg_editable = reopen_cw_status(sid,flg_force_loading)
 % manage cw (calendar week) status, reopening it if required
 
 flg_editable = 0;
 if flg_force_loading
     disp('Provo a riaprire la settimana...')
-    result = iw('write_cmd',{'run','iw/roc/roc_update_cw',6,struct()});
+    result = iw('write_cmd',{sid,'run','iw/roc/roc_update_cw',6,struct()});
     show_error(result)
-    [~, str_status] = analyse_OreROC();
+    [~, str_status] = analyse_OreROC(sid);
     if (str_status.status == 'g')
         disp('*** La settimana non può essere modificata!')
     else
