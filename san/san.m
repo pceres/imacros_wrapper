@@ -16,6 +16,9 @@ function result = san(action,params)
 % result = san('dnld_town',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/','/home/ceres/StatoCivileSAN/Caposele_Restaurazione/','Caposele','Caposele(provincia di Avellino)'})
 % result = san('dnld_town',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+italiano/Castelnuovo+di+Conza/','/home/ceres/StatoCivileSAN/CastelnuovoDiConza_Italia/','CastelnuovoDiConza','Castelnuovo di Conza'})
 %
+% % in case of error, run the following to release the iw session and allow a correct restart
+% result = iw('release_session',{''})
+%
 % err_code:
 %   1: problems with iMacros_wrapper
 %   2: problems accessing web page
@@ -55,14 +58,14 @@ tag_town    = str.tag_town;     % title of the page
 webfolder_folder = folder_root;
 create_folder_if_needed(webfolder_folder);
 
-result0 = configure_iw(sid);
-if (result0.err_code ~= 0)
+result_cfg = configure_iw(sid);
+if (result_cfg.err_code ~= 0)
     err_code = 1;
     err_msg  = 'problems with iMacros_wrapper';
 else
     % get typology info (available years, etc.)
     info_town_matfile = san_get_config('info_town');
-    result0 = detect_webfolder_info(url_town,tag_town,webfolder_folder,info_town_matfile);
+    result0 = detect_webfolder_info(sid,url_town,tag_town,webfolder_folder,info_town_matfile);
     if (result0.err_code ~= 0)
         err_code = 3;
         err_msg  = sprintf('Error accessing url for tipology %s: %s',tag_town,url_town);
@@ -136,14 +139,14 @@ tag_typology    = str.tag_typology;     % title of the page
 webfolder_folder = folder_root;
 create_folder_if_needed(webfolder_folder);
 
-result0 = configure_iw(sid);
-if (result0.err_code ~= 0)
+result_cfg = configure_iw(sid);
+if (result_cfg.err_code ~= 0)
     err_code = 1;
     err_msg  = 'problems with iMacros_wrapper';
 else
     % get typology info (available years, etc.)
     info_typology_matfile = san_get_config('info_typology');
-    result0 = detect_webfolder_info(url_typology,tag_typology,webfolder_folder,info_typology_matfile);
+    result0 = detect_webfolder_info(sid,url_typology,tag_typology,webfolder_folder,info_typology_matfile);
     if (result0.err_code ~= 0)
         err_code = 3;
         err_msg  = sprintf('Error accessing url for tipology %s: %s',tag_typology,url_typology);
@@ -225,8 +228,8 @@ folder_root  = ensure_filesep_ending(str.folder_root); % root folder where folde
 folder_batch = str.folder_batch;% folder containing downloaded images
 tag_batch    = str.tag_batch;   % tag of the web page to be checked before proceeding with download
 
-result0 = configure_iw(sid);
-if (result0.err_code ~= 0)
+result_cfg = configure_iw(sid);
+if (result_cfg.err_code ~= 0)
     err_code = 1;
     err_msg  = 'problems with iMacros_wrapper';
 else
@@ -304,7 +307,7 @@ end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function result = detect_webfolder_info(url_webfolder,tag_webfolder,webfolder_folder,info_matfile)
+function result = detect_webfolder_info(sid,url_webfolder,tag_webfolder,webfolder_folder,info_matfile)
 % get webfolder info (available items and corresponding url)
 
 err_code = 0;
@@ -422,6 +425,14 @@ if ( length(strmatch('san',list_fcn,'exact'))==1 )
         error('Todo: you are not using the default session!')
     end
     
+    % register clean up object to release the session in case of CTRL-C
+    CleanupObj = onCleanup(@() myCleanupFun(sid));
+    
+    % configure iw
+    iw('config_iw',{'reset'});
+    iw('config_iw',{'debug',1});
+    iw('config_iw',{'timeout_fdbk',20});
+    
     result = iw('write_cmd',{sid,'set_param',struct('dump_type','HTM')}); % requires dump of web pages in html format
     if (result.err_code ~= 0)
         err_code = 1;
@@ -437,12 +448,23 @@ if ( length(strmatch('san',list_fcn,'exact'))==1 )
         end
     end
 else
+    CleanupObj = [];
     % nested call: repeating configuration is not needed
 end
 
 result = struct();
-result.err_code = err_code;
-result.err_msg = err_msg;
+result.err_code   = err_code;
+result.err_msg    = err_msg;
+result.CleanupObj = CleanupObj; % once this object will be destroyed, the cleanup function will be called
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function myCleanupFun(sid)
+% this function is called at the end of main call, or in case of CTRL-C,
+% and releases the iw session id
+
+iw('release_session',{sid});
 
 
 
@@ -818,7 +840,7 @@ end
 ancora = 1;
 count = 0;
 while ancora
-    result = iw('write_cmd',{sid,'run',['iw/san/' imacro],8,struct('URL',url_batch,'TITLE',page_title)});
+    result = iw('write_cmd',{sid,'run',['iw/san/' imacro],16,struct('URL',url_batch,'TITLE',page_title)});
     result0 = iw('read_fdbk',{sid,''});
     if result.err_code == 0
         result.text = result0.text;
@@ -1121,7 +1143,7 @@ function flg_ok = download_img(sid,ind_img,url_img,dnld_file,batch_folder,num_fi
 
 flg_ok = 0;
 
-bytes_thr = 5e5; % [bytes] min size to accept image as ok
+bytes_thr = 4e5; % [bytes] min size to accept image as ok
 bytes_thr2 = 2.5e5; % last attempt for small images
 
 z = regexp(url_img,'[0-9_]*\.jpg','match');
@@ -1135,7 +1157,7 @@ img_file = regexprep(img_file,'_[0-9]+\.',['_' sprintf(['%0' num2str(num_figures
 result0 = open_batch_page(sid,'go_image',url_img,['Immagine<SP>' num2str(ind_img)],['Immagine ' num2str(ind_img)],{});
 if ( result0.err_code == 0 )
     % image was downloaded correctly
-    result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',8,struct()});
+    result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',16,struct()});
     if (result0.err_code ~= 0)
         fprintf(1,'%d: %s\n',result0.err_code,result0.err_msg)
     end
@@ -1177,7 +1199,7 @@ while ( (isempty(z) || (z(1).bytes < bytes_thr)) && (count < max_count) )
 end
 if (count>=max_count)
     % repeat zoom macro
-    result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',8,struct()});
+    result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',16,struct()});
     if (result0.err_code ~= 0)
         fprintf(1,'%d: %s\n',result0.err_code,result0.err_msg)
     end
@@ -1323,4 +1345,3 @@ function sid = sid_default()
 % started. In case of single session, then, you can safely use this sid
 
 sid = '';
-

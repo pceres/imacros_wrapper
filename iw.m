@@ -28,7 +28,7 @@ function result = iw(action,varargin)
 %           iw_action:
 %               'stop': no additional param needed. Require
 %                       imacros_wrapper_js looping stop.
-%               'dump': no additional param needed. Dump current web page. This is needed in 
+%               'dump': no additional param needed. Dump current web page. This is needed in
 %                       case of web pages that evolve in time.
 %               'run' : param_struct param needed. Require iMacros macro
 %                       execution. macro params are defined in the
@@ -86,10 +86,14 @@ function result = iw(action,varargin)
 %                               'folder': root folder for iMacros
 %       'config_iw': configure iw behaviour (Matlab side)
 %                    Action input must be followed by a cell array in the form
-%                       {param,value} where
-%           param: name of configurable parameter {'debug'}, with
-%                  corresponding values 0 (normal behaviour) or 1 (debug
-%                  messages)
+%                       {'reset'} or {param,value} where
+%           param: name of configurable parameters:
+%               'debug': with corresponding values 0 (normal behaviour) or
+%                        1 (debug messages)
+%               'timeout_fdbk': [s] timeout when waiting for feedback from
+%                               iMacros wrapper command execution (except
+%                               for write_cmd-run action, where the timeout
+%                               is indicated explicitly
 %           value: value to be set for parameter param
 %
 % output:
@@ -99,8 +103,9 @@ function result = iw(action,varargin)
 %       [additional fields]: depending on required action, see action help above
 %
 % % es.:
-% result = iw('config_iw',{'debug',1})
-% result = iw('grab_session'); sid = result.sid; % sid = '' for single session operation
+% result = iw('config_iw',{'reset'})
+% result = iw('config_iw',{'debug',1,'timeout_fdbk',10})
+% result = iw('grab_session'); sid = result.sid, % sid = '' for single session operation
 % result = iw('write_cmd',{sid,'run','iw/iw_test/Google',6,struct('SEARCHSTRING','Genealogia di Caposele')})
 % result = iw('write_cmd',{sid,'set_param',struct('dump_type','HTM')}) % 'TXT','CPL','TXT','HTM','BMP','PNG','JPEG'
 % result = iw('write_cmd',{sid,'set_param',struct('pause_time','0.5')})
@@ -108,7 +113,7 @@ function result = iw(action,varargin)
 % result = iw('write_cmd',{sid,'dump'});
 % result = iw('read_fdbk',{sid,''})
 % result = iw('iMacros_rootfolder',{});folder = result.folder
-% result = iw('write_cmd',{'set_param',struct('pause_time','0.2')})
+% result = iw('write_cmd',{sid,'set_param',struct('pause_time','0.2')})
 % result = iw('log',{'this is a debug msg',1})
 % result = iw('pause_rnd',{4,1})    % random pause (avg = 4 s, std dev = 1 s)
 % result = iw('rnd_item',{{'ciao','hello','salve'}})
@@ -250,9 +255,8 @@ switch action
         result.folder = folder;
         result0.err_code = 0; % default result as there is no output
     case 'config_iw'
-        param_name   = params{1}{1}{1};
-        param_value  = params{1}{1}{2};
-        result0 = config_iw(param_name,param_value);
+        param_data   = params{1}{1};
+        result0 = config_iw(param_data);
     otherwise
         error('I shouldn''t be here! (action %s)',action)
 end
@@ -260,30 +264,50 @@ end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function result = config_iw(param_name,param_value)
+function result = config_iw(param_data)
 % err_code:
 % 1; % wrong parameter name
 % 2; % wrong parameter value
 global str_iw
-str_iw = init_str_iw(str_iw);
 
 err_code = 0;
 err_msg  = '';
 result = struct();
 
-switch param_name
-    case 'debug'
-        % 0: normal behaviour
-        % 1: show debug messages
-        if ismember(param_value,[0,1])
-            str_iw.debug = param_value;
-        else
-            err_code = 2;
-            err_msg  = 'Wrong parameter value';
+if ismember('reset',param_data{1})
+    str_iw = init_str_iw([]);
+else
+    str_iw = init_str_iw(str_iw);
+    for i_param = 1:2:length(param_data)
+        param_name  = param_data{i_param};
+        param_value = param_data{i_param+1};
+        switch param_name
+            case 'debug'
+                % 0: normal behaviour
+                % 1: show debug messages
+                if ismember(param_value,[0,1])
+                    str_iw.debug = param_value;
+                else
+                    err_code = 2;
+                    err_msg  = sprintf('Wrong parameter value for param %s',param_name);
+                end
+            case 'timeout_fdbk'
+                % [s] timeout waiting for iw command completion feedback
+                if (  isnumeric(param_value) && (param_value>0) )
+                    str_iw.timeout_fdbk = param_value;
+                else
+                    err_code = 2;
+                    err_msg  = sprintf('Wrong parameter value for param %s',param_name);
+                end
+            otherwise
+                err_code = 1;
+                err_msg  = sprintf('Wrong parameter name %s',param_name);
         end
-    otherwise
-        err_code = 1;
-        err_msg  = 'Wrong parameter name';
+        if (err_code > 0)
+            % stop at the first param that has an error
+            break
+        end
+    end
 end
 
 result.err_code = err_code;
@@ -391,7 +415,8 @@ result = struct();
 fullname_retcode = get_filenameref('retcode',sid);
 fullname_cmd = get_filenameref('cmd',sid);
 header_line = 'ACTION,PARAMS';
-timeout_fdbk = 6; % [s]
+
+timeout_fdbk = str_iw.timeout_fdbk; % [s]
 
 str_separ.and = '|&';
 str_separ.eq  = '|=';
@@ -449,7 +474,8 @@ result.err_msg = err_msg;
 function str_iw = init_str_iw(str_iw)
 
 matr_default = {
-    'debug',    0;
+    'debug',        0;
+    'timeout_fdbk', 6;
     };
 
 if isempty(str_iw)
@@ -482,6 +508,9 @@ ks_params = ks_params(1:end-2);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [err_code err_msg] = write_and_wait_fdbk(text,fullname_cmd,fullname_retcode,timeout_fdbk)
 
+% convert from seconds to day (now uses that unit)
+timeout_fdbk_day = timeout_fdbk/60/60/24; % [d]
+
 % get timestamp
 z_old = dir(fullname_retcode);
 
@@ -493,12 +522,12 @@ if (fid>0)
     %% wait for macro execution and read return code
     % wait for retcode
     ancora = 1;
-    tstart = cputime;
+    tstart = now; % [d]
     while ancora
         z_new = dir(fullname_retcode);
         z_cmd = dir(fullname_cmd);
         pause(0.5);
-        flg_no_timeout = cputime-tstart < timeout_fdbk;
+        flg_no_timeout = now-tstart < timeout_fdbk_day; % [d]
         flg_no_feedback = isequal(z_old,z_new) || isempty(z_new);
         flg_iw_no_restart = ~isempty(z_cmd); % is iMacros wrapper is stopped and restarted, command file is deleted. In this case, better to issue a timeout error
         ancora = (flg_no_feedback && flg_no_timeout && flg_iw_no_restart);
@@ -691,7 +720,7 @@ else
         end
         
         flg_lock = 1; % lock the session
-        set_lock_state(sid,txt,flg_lock)
+        set_lock_state(sid,txt,flg_lock);
     else
         err_code = 2;
         err_msg  = 'all iMacros wrapper sessions are busy';

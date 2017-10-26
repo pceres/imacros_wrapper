@@ -33,5 +33,9 @@ To improve performance, allowing very long runs (many days):
 To open multiple Firefox instances with different profiles, run following prompt commands:
 "C:\Program Files (x86)\Mozilla Firefox\firefox.exe" "imacros://run/?m=iw\imacros_wrapper.js"
 "C:\Program Files (x86)\Mozilla Firefox\firefox.exe" -P <profile_2> --no-remote "imacros://run/?m=iw\imacros_wrapper.js"
-
+...
 "C:\Program Files (x86)\Mozilla Firefox\firefox.exe" -P <profile_N> --no-remote "imacros://run/?m=iw\imacros_wrapper.js"
+
+To create a different Firefox profile, from command prompt run firefox with -P argument (the profile manager gui will open):
+"C:\Program Files (x86)\Mozilla Firefox\firefox.exe" -P
+For each new Firefox instance, follow the instructions for set up indicated above
