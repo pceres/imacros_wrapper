@@ -121,7 +121,7 @@ function result = iw(action,varargin)
 % result = iw('write_cmd',{sid,'stop'}) % stop iMacros wrapper infinite loop
 % result = iw('release_session',{sid});
 %
-% % build a search string ranking
+% %%% build a search string ranking
 % result = iw('grab_session'); sid = result.sid; % sid = '' for single session operation
 % result = iw('write_cmd',{sid,'set_param',struct('pause_time','0.5','dump_type','TXT')})
 % list = {'Fiat','Chrysler','FCA','Volkswagen','Toyota'}';
@@ -137,7 +137,7 @@ function result = iw(action,varargin)
 % list=fieldnames(z);z_=regexp(list,'[0-9]+_[0-9]+_[0-9]+','match');z2=[z_{:}]';v_day=datenum(z2,'yyyy_mm_dd');bulk=[];figure(99),hold on,grid on,title('Number of Google results in time');for i_day = 1:length(list),tag=list{i_day};str=z.(tag);[tmp ind]=sort(str(:,1));str=str(ind,:);leg=str(:,1);bulk=[bulk cell2mat(str(:,2))];end;num_days=length(list);color='bgrkmc';for i_logo=1:size(bulk,1),plot(v_day,bulk(i_logo,:),['.-' color(i_logo)]),end,legend(leg,'Location','best'),   set(gca,'XTickLabel',''),p=get(gca,'position');p(2)=p(2)+.1; p(4)=p(4)-.1;set(gca,'position',p);text(v_day,zeros(1,length(list))-0,z2,'rotation',90,'horizontal','right','interpreter','none'),legend(leg,'Location','Best')
 % result = iw('release_session',{sid});
 %
-% % automatize image download from a website
+% %%% automatize image download from a website
 % result = san('dnld_typology',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/Matrimoni/','Caposele_Matrimoni','Matrimoni'})
 %
 %

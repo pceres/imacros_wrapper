@@ -10,7 +10,7 @@ str_hours       = struct();
 matr_comm       = {};
 
 username = 'ceres'
-password = 'wl1!Vwkd'
+password = 'yv1moq!S'
 matr_comm = {'KIEC002_PERT_PWT',0.50;'KIGI004_PERT_PWT',0.30;'KIGI006_PERT_PWT',0.20}
 vec_target = datevec(now-7); % default date: point to 7 days ago (previous week)
 flg_force_loading = 1
@@ -18,7 +18,14 @@ flg_force_loading = 1
 close all
 
 result = iw('grab_session');
-sid = result.sid;
+if (result.err_code == 0)
+    sid = result.sid
+    
+    % register clean up object to release the session in case of CTRL-C
+    CleanupObj = onCleanup(@() iw('release_session',{sid}));
+else
+    error('Problems connecting to iMacros wrapper')
+end
 
 %% determine target day
 vec_target = ask_user_ks_date(vec_target); % let user change target date
@@ -71,8 +78,6 @@ catch me %#ok<NASGU>
         disp(lasterr) %#ok<LERR>
     end
 end
-
-iw('release_session',{sid});
 
 
 
