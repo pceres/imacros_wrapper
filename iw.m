@@ -140,7 +140,19 @@ function result = iw(action,varargin)
 % %%% automatize image download from a website
 % result = san('dnld_typology',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/Matrimoni/','Caposele_Matrimoni','Matrimoni'})
 %
-%
+% %%% retrieve price of Bitcoin
+% list = [0.1 0.099 6325 632.5 datenum('7-Nov-2017 11:24 PM');0.1 0.099 4996 499.6 datenum('31-Oct-2017 01:47 AM'); 1 0.99 137.8 137.8 datenum('29-Oct-2013 03:45 PM'); 0.1 0.099 94.94 9.49 datenum('14-Oct-2013 11:24 AM')];
+% result = iw('write_cmd',{sid,'run','iw/iw_test/go_url',6,struct('URL','https://blockchain.info/charts')})
+% result = iw('read_fdbk',{sid,''});
+% z=regexp(result.text,'Prezzo di mercato \(USD\) \$([0-9,\.]+) USD','tokens');
+% ks_price_us = z{1}{1}; price_us = str2double(strrep(ks_price_us,',',''));
+% result = iw('write_cmd',{sid,'run','iw/iw_test/go_url',6,struct('URL','https://www.google.it/search?source=hp&q=dollar+to+euro')})
+% result = iw('read_fdbk',{sid,''});
+% z=regexp(result.text,'1 U.S. dollar =[\s\r\n]+([0-9\.]+) Euros\n','tokens');dollar2euro = str2double(z{1}{1});
+% fprintf(1,'\n1 bitcoin costs %.2f$ = %.2fE (1$ = %.5fE)\n\n',price_us,price_us*dollar2euro,dollar2euro)
+% for i_trans = 1:size(bulk,1),bc_bought = bulk(i_trans,1);bc_held = bulk(i_trans,2);bc_price_us = bulk(i_trans,3);cost_us = bulk(i_trans,4);trans_date = bulk(i_trans,5);value_us=bc_held*price_us;value_euro=value_us*dollar2euro;bulk(i_trans,6)=value_us;bulk(i_trans,7)=value_euro;  fprintf(1,'%8f\t%8f\t%8f\t%8f\t%s\t%8.2f\t%8.2f\n',bc_bought,bc_held,bc_price_us,cost_us,datestr(trans_date),value_us,value_euro);end, disp(char(ones(1,92)*'='))
+% v=sum(bulk);fprintf(1,'%8f\t%8f\t%8f\t%8f\t%s\t%8.2f\t%8.2f\n',v(1),v(2), NaN,v(4),'          -         ',v(6),v(7))
+% total_cost_euro = v(4); total_value_euro = v(7);fprintf('\nTotal expense: %.2fE - Total value: %.2fE --> Earning: %.2fE - gain: %.0f%%\n',total_cost_euro,total_value_euro,total_value_euro-total_cost_euro,total_value_euro/total_cost_euro*100)
 %
 % error codes for write_cmd action:
 % 0; % action executed correctly
