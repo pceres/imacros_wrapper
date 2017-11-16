@@ -1,0 +1,6 @@
+﻿'input:
+'URL "http://www.google.com" : url to be reached
+'
+'SET URL "http://www.google.com"
+
+URL GOTO={{URL}}

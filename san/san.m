@@ -422,9 +422,11 @@ if ( length(strmatch('san',list_fcn,'exact'))==1 )
     % this is the first call, so configuring is needed
     result = iw('grab_session');
     sid_new = result.sid;
-    if ~strcmp(sid,sid_new)
+    if result.err_code > 0
+         error(result.err_msg)
+    elseif ~strcmp(sid,sid_new)
         iw('release_session',{sid_new});
-        error('Todo: you are not using the default session!')
+        error('Todo: you are not using the default session "%s" (but "%s" instead)!',sid,sid_new)
     end
     
     % register clean up object to release the session in case of CTRL-C
