@@ -536,35 +536,40 @@ if ( ~flg_fast_result )
                 
                 % view image last
                 result1 = open_batch_page(sid,'go_image',url_imglast,'Immagine *','Immagine [0-9]+',{});
-                result1_text = result1.text;
-                z = regexp(result1_text,'<h1[^>]+>Immagine ([^<]+)</h1>','tokens');
-                ks_num_imglast = z{1}{1}; % number of last image
-                num_img = str2double(ks_num_imglast);
-                
-                %% detetct list of all images in batch
-                flg_full_listing_1 = ~strcmp(sub_batch_first,sub_batch_last);   % first and last image belong to different sub_batches, eg. Salerno Restaurazione Valva Processetti 1855 6484:  result = san('dnld_batch',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Valvaoggi+Salerno/Matrimoni+processetti/1855/6484/','/home/ceres/StatoCivileSAN/Valva_Restaurazione/','Valva_MatrimoniProcessetti_1855_6484','6484'})
-                flg_full_listing_2 = (str2double(ks_num_img_first)~=1);         % first image has not id 1 in the url, eg. Salerno Restaurazione Acerno Diversi 1835 21:  result = san('dnld_batch',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Acerno/Diversi/1835/21/','/home/ceres/StatoCivileSAN/Acerno_Restaurazione/','Acerno_Diversi_1835_21','21'})
-                flg_full_listing_3 = (num_img_last_url~=num_img);               % last image has not the same id in the url, eg. Salerno Restaurazione Acerno Morti 1850 26:  result = san('dnld_batch',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Acerno/Morti/1850/26/','/home/ceres/StatoCivileSAN/Acerno_Restaurazione/','Acerno_Morti_1850_26','26'})
-                if ( flg_full_listing_1 || flg_full_listing_2 || flg_full_listing_3 )
-                    % there is more than one single subbatch for the batch, the
-                    % first image has not id 1 in the url, or the last image has a different number
-                    % in image id and url: it is needed to detect url for each image
-                    disp('Multiple subbatch detected: complete url listing is needed...')
-                    fprintf(1,'\tsub_batches: %s..%s\n\tfirst image number: in title %d & in url %d\n\tlast image number: in title %d & in url %d\n',sub_batch_first,sub_batch_last,str2double(id_img1),str2double(ks_num_img_first),num_img,num_img_last_url)
-                    result0 = get_img_list(sid,text_batch_first,tag_batch,batch_folder);
+                if (result0.err_code > 0)
+                    err_code = 4;
+                    err_msg  = sprintf('problems accessing image %s',url_imglast);
                 else
-                    % all images are in the same subbatch, the list can be created
-                    % easily
-                    matr_img = {};
-                    for i_img = 1:num_img
-                        img_tag = sprintf(['%0' num2str(num_figures) 'd'],i_img);
-                        url_img = strrep(url_img_template,special_string,img_tag);
-                        matr_img(end+1,:) = {i_img, url_img}; %#ok<AGROW>
-                    end
+                    result1_text = result1.text;
+                    z = regexp(result1_text,'<h1[^>]+>Immagine ([^<]+)</h1>','tokens');
+                    ks_num_imglast = z{1}{1}; % number of last image
+                    num_img = str2double(ks_num_imglast);
                     
-                    result0.err_code = 0;
-                    result0.err_msg  = '';
-                    result0.matr_img = matr_img;
+                    %% detetct list of all images in batch
+                    flg_full_listing_1 = ~strcmp(sub_batch_first,sub_batch_last);   % first and last image belong to different sub_batches, eg. Salerno Restaurazione Valva Processetti 1855 6484:  result = san('dnld_batch',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Valvaoggi+Salerno/Matrimoni+processetti/1855/6484/','/home/ceres/StatoCivileSAN/Valva_Restaurazione/','Valva_MatrimoniProcessetti_1855_6484','6484'})
+                    flg_full_listing_2 = (str2double(ks_num_img_first)~=1);         % first image has not id 1 in the url, eg. Salerno Restaurazione Acerno Diversi 1835 21:  result = san('dnld_batch',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Acerno/Diversi/1835/21/','/home/ceres/StatoCivileSAN/Acerno_Restaurazione/','Acerno_Diversi_1835_21','21'})
+                    flg_full_listing_3 = (num_img_last_url~=num_img);               % last image has not the same id in the url, eg. Salerno Restaurazione Acerno Morti 1850 26:  result = san('dnld_batch',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Acerno/Morti/1850/26/','/home/ceres/StatoCivileSAN/Acerno_Restaurazione/','Acerno_Morti_1850_26','26'})
+                    if ( flg_full_listing_1 || flg_full_listing_2 || flg_full_listing_3 )
+                        % there is more than one single subbatch for the batch, the
+                        % first image has not id 1 in the url, or the last image has a different number
+                        % in image id and url: it is needed to detect url for each image
+                        disp('Multiple subbatch detected: complete url listing is needed...')
+                        fprintf(1,'\tsub_batches: %s..%s\n\tfirst image number: in title %d & in url %d\n\tlast image number: in title %d & in url %d\n',sub_batch_first,sub_batch_last,str2double(id_img1),str2double(ks_num_img_first),num_img,num_img_last_url)
+                        result0 = get_img_list(sid,text_batch_first,tag_batch,batch_folder);
+                    else
+                        % all images are in the same subbatch, the list can be created
+                        % easily
+                        matr_img = {};
+                        for i_img = 1:num_img
+                            img_tag = sprintf(['%0' num2str(num_figures) 'd'],i_img);
+                            url_img = strrep(url_img_template,special_string,img_tag);
+                            matr_img(end+1,:) = {i_img, url_img}; %#ok<AGROW>
+                        end
+                        
+                        result0.err_code = 0;
+                        result0.err_msg  = '';
+                        result0.matr_img = matr_img;
+                    end
                 end
             end
             
@@ -1036,7 +1041,7 @@ end
 %% remove multiple images
 if ( ~isempty(list_multiple) )
     if flg_max_loop_count
-        % too many iterations, leaving the duplicated images
+        % too many iterations, leaving the duplicated images (es. Laviano MatrimoniProcessetti 1811 2653 image 90 & 152)
         fprintf(1,'\tSkipping deletion, because %d loops were reached.\n',max_loop_count);
     else
         for i_multiple = 1:size(list_multiple,1)

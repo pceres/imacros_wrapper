@@ -148,10 +148,10 @@ function result = iw(action,varargin)
 % ks_price_us = z{1}{1}; price_us = str2double(strrep(ks_price_us,',',''));
 % result = iw('write_cmd',{sid,'run','iw/iw_test/go_url',6,struct('URL','https://www.google.it/search?source=hp&q=dollar+to+euro')})
 % result = iw('read_fdbk',{sid,''});
-% z=regexp(result.text,'1 U.S. dollar =[\s\r\n]+([0-9\.]+) Euros\n','tokens');dollar2euro = str2double(z{1}{1});
+% z=regexp(result.text,'1 U.S. dollar =[\s\r\n]+([0-9\.]+) Euros[\r\n]','tokens');dollar2euro = str2double(z{1}{1});
 % fprintf(1,'\n1 bitcoin costs %.2f$ = %.2fE (1$ = %.5fE)\n\n',price_us,price_us*dollar2euro,dollar2euro)
-% for i_trans = 1:size(bulk,1),bc_bought = bulk(i_trans,1);bc_held = bulk(i_trans,2);bc_price_us = bulk(i_trans,3);cost_us = bulk(i_trans,4);trans_date = bulk(i_trans,5);value_us=bc_held*price_us;value_euro=value_us*dollar2euro;bulk(i_trans,6)=value_us;bulk(i_trans,7)=value_euro;  fprintf(1,'%8f\t%8f\t%8f\t%8f\t%s\t%8.2f\t%8.2f\n',bc_bought,bc_held,bc_price_us,cost_us,datestr(trans_date),value_us,value_euro);end, disp(char(ones(1,92)*'='))
-% v=sum(bulk);fprintf(1,'%8f\t%8f\t%8f\t%8f\t%s\t%8.2f\t%8.2f\n',v(1),v(2), NaN,v(4),'          -         ',v(6),v(7))
+% for i_trans = 1:size(list,1),bc_bought = list(i_trans,1);bc_held = list(i_trans,2);bc_price_us = list(i_trans,3);cost_us = list(i_trans,4);trans_date = list(i_trans,5);value_us=bc_held*price_us;value_euro=value_us*dollar2euro;list(i_trans,6)=value_us;list(i_trans,7)=value_euro;  fprintf(1,'%8f\t%8f\t%8f\t%8f\t%s\t%8.2f\t%8.2f\n',bc_bought,bc_held,bc_price_us,cost_us,datestr(trans_date),value_us,value_euro);end, disp(char(ones(1,92)*'='))
+% v=sum(list);fprintf(1,'%8f\t%8f\t%8f\t%8f\t%s\t%8.2f\t%8.2f\n',v(1),v(2), NaN,v(4),'          -         ',v(6),v(7))
 % total_cost_euro = v(4); total_value_euro = v(7);fprintf('\nTotal expense: %.2fE - Total value: %.2fE --> Earning: %.2fE - gain: %.0f%%\n',total_cost_euro,total_value_euro,total_value_euro-total_cost_euro,total_value_euro/total_cost_euro*100)
 %
 % error codes for write_cmd action:
@@ -548,14 +548,20 @@ if (fid>0)
     if (~flg_no_feedback)
         % parse retcode file and extract err_code and err_msg
         fileID = fopen(fullname_retcode,'r','n');
-        fseek(fileID,-1000,'eof'); % try positioning 1000 chars before end of file, as we're interested in last line. If it fails, no problem: the file is small
-        txt = char(fread(fileID,z_new.bytes)');
-        fclose(fileID);
-        if ( (~isempty(txt)) && (double(txt(1))==239) )
-            % skip first 3 encoding chars
-            txt = txt(4:end);
+        if (fileID == -1)
+            % unable to open retcode file (return_codeXXX.txt)
+            err_code = 12;
+            err_msg  = 'No feedback available from iMacros wrapper';
+        else
+            fseek(fileID,-1000,'eof'); % try positioning 1000 chars before end of file, as we're interested in last line. If it fails, no problem: the file is small
+            txt = char(fread(fileID,z_new.bytes)');
+            fclose(fileID);
+            if ( (~isempty(txt)) && (double(txt(1))==239) )
+                % skip first 3 encoding chars
+                txt = txt(4:end);
+            end
+            [err_code err_msg] = get_fdbk_from_text(txt); % extract feedback
         end
-        [err_code err_msg] = get_fdbk_from_text(txt); % extract feedback
     else
         % timeout
         err_code = 11;
