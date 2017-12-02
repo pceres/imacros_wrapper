@@ -5,6 +5,7 @@ TAG POS=2 TYPE=SPAN ATTR=TXT:Annulla
 TAG POS=1 TYPE=SPAN ATTR=TXT:Selezione<SP>CID<SP>per<SP>Consuntivazione<SP>Ore
 ' return to cw status window
 TAG POS=2 TYPE=SPAN ATTR=TXT:Continua
+WAIT SECONDS=1
 
 ' save page as htm
 SET {{!EXTRACT}} =
