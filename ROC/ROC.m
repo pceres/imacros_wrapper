@@ -30,16 +30,19 @@ end
 %% determine target day
 vec_target = ask_user_ks_date(vec_target); % let user change target date
 
+%% login
+result = iw('config_iw',{'debug',0}); %#ok<NASGU>
+
+result = iw('write_cmd',{sid,'run','iw/roc/roc_login',10,struct('USERNAME',username,'PASSWORD',password)});
+if (result.err_code == 11)
+    error('iMacrosWrapper is not running properly, please check.')
+end
+show_error(result);
+if ~isempty(regexp(result.err_msg,'element INPUT specified by ID:sap-user was not found','once'))
+    disp('Login was already done')
+end
+
 try
-    %% login
-    result = iw('config_iw',{'debug',0});
-    
-    result = iw('write_cmd',{sid,'run','iw/roc/roc_login',10,struct('USERNAME',username,'PASSWORD',password)});
-    show_error(result);
-    if ~isempty(regexp(result.err_msg,'element INPUT specified by ID:sap-user was not found','once'))
-        disp('Login was already done')
-    end
-    
     %% open calendar week
     [ks_month_tag ks_month_pos ks_day] = determine_cw_pos(vec_target);
     clear result
@@ -62,7 +65,7 @@ try
             %% calculate ROC hours to be entered
             [str_ROC matr_comm] =  calculate_ROC_hours(matr_comm,h_pres);
             clear result
-            result = iw('write_cmd',{sid,'run','iw/roc/roc_enter_hours',15,str_ROC});
+            result = iw('write_cmd',{sid,'run','iw/roc/roc_enter_hours',25,str_ROC});
             show_error(result)
             
             %% check that hours were entrered correctly
@@ -244,7 +247,7 @@ function flg_editable = reopen_cw_status(sid,flg_force_loading)
 flg_editable = 0;
 if flg_force_loading
     disp('Provo a riaprire la settimana...')
-    result = iw('write_cmd',{sid,'run','iw/roc/roc_update_cw',6,struct()});
+    result = iw('write_cmd',{sid,'run','iw/roc/roc_update_cw',10,struct()});
     show_error(result)
     [~, str_status] = analyse_OreROC(sid);
     if (str_status.status == 'g')

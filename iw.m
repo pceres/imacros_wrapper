@@ -154,6 +154,10 @@ function result = iw(action,varargin)
 % v=sum(list);fprintf(1,'%8f\t%8f\t%8f\t%8f\t%s\t%8.2f\t%8.2f\n',v(1),v(2), NaN,v(4),'          -         ',v(6),v(7))
 % total_cost_euro = v(4); total_value_euro = v(7);fprintf('\nTotal expense: %.2fE - Total value: %.2fE --> Earning: %.2fE - gain: %.0f%%\n',total_cost_euro,total_value_euro,total_value_euro-total_cost_euro,total_value_euro/total_cost_euro*100)
 %
+% %%% stop all current sessions
+% 1,folder='D:\users\ceres\Documents\iMacros\Downloads\';z=dir([folder 'lockfile*.txt']);for i_sid=1:length(z);name=z(i_sid).name;sid=strrep(strrep(name,'.txt',''),'lockfile','');result = iw('write_cmd',{sid,'stop'});filename=[folder name];if exist(filename,'file'),delete(filename),end, fprintf(1,'Stopped session "%s"\n',sid),end;delete([folder '*.*'])
+%
+%
 % error codes for write_cmd action:
 % 0; % action executed correctly
 % 1; % end loop request
