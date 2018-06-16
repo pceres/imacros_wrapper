@@ -155,7 +155,9 @@ function result = iw(action,varargin)
 % total_cost_euro = v(4); total_value_euro = v(7);fprintf('\nTotal expense: %.2fE - Total value: %.2fE --> Earning: %.2fE - gain: %.0f%%\n',total_cost_euro,total_value_euro,total_value_euro-total_cost_euro,total_value_euro/total_cost_euro*100)
 %
 % %%% stop all current sessions
-% 1,folder='D:\users\ceres\Documents\iMacros\Downloads\';z=dir([folder 'lockfile*.txt']);for i_sid=1:length(z);name=z(i_sid).name;sid=strrep(strrep(name,'.txt',''),'lockfile','');result = iw('write_cmd',{sid,'stop'});filename=[folder name];if exist(filename,'file'),delete(filename),end, fprintf(1,'Stopped session "%s"\n',sid),end;delete([folder '*.*'])
+% folder = '/home/ceres/iMacros/Downloads/';            % Windows
+% folder='D:\users\ceres\Documents\iMacros\Downloads\'; % Linux
+% 2,z=dir([folder 'lockfile*.txt']);for i_sid=1:length(z);name=z(i_sid).name;sid=strrep(strrep(name,'.txt',''),'lockfile','');result = iw('write_cmd',{sid,'stop'});filename=[folder name];if exist(filename,'file'),delete(filename),end, fprintf(1,'Stopped session "%s"\n',sid),end;delete([folder '*.*'])
 %
 %
 % error codes for write_cmd action:
