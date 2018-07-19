@@ -302,6 +302,14 @@ else
         z=regexp(result0.text,'giTitle">[\r\n].*?">[\r\n]+([^<]+)<','tokens');
         list_buste = [z{:}]';
         
+        if ( length(cell2mat(regexp(list_buste,'Immagine '))) == length(list_buste) )
+            % if the batch layer is missing, and there are directly images,
+            % return a dummy batch to respect the
+            % town-->typology-->year-->batch architecture
+            % eg.: http://dl.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Avellino/Stato+civile+della+restaurazione/Caposele/Diversi/1861/
+            list_buste     = {tag_item}; % dummy batch, with the same tag as the year (it will be checked in the downloaded page)
+            list_url_buste = {url_item}; % return the current url
+        end
         matr_buste = [list_buste list_url_buste];
     end
 end
@@ -1170,7 +1178,7 @@ function flg_ok = download_img(sid,ind_img,url_img,dnld_file,batch_folder,num_fi
 
 flg_ok = 0;
 
-bytes_thr = 4e5; % [bytes] min size to accept image as ok
+bytes_thr = 3e5; % [bytes] min size to accept image as ok
 bytes_thr2 = 2.5e5; % last attempt for small images
 
 z = regexp(url_img,'[0-9_]*\.jpg','match');
@@ -1225,6 +1233,11 @@ while ( (isempty(z) || (z(1).bytes < bytes_thr)) && (count < max_count) )
     count = count+1;
 end
 if (count>=max_count)
+    if exist(dnld_file,'file')
+        % delete previous file, to be sure that following checks will be
+        % done on the new downloaded file
+        delete(dnld_file)
+    end
     % repeat zoom macro
     result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',get_write_cmd_timeout(),struct()});
     if (result0.err_code ~= 0)
