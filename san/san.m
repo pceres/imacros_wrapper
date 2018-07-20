@@ -1190,7 +1190,8 @@ img_file = [batch_folder name_img]; % es. /home/ceres/iMacros/Downloads/Caposele
 img_file = regexprep(img_file,'_[0-9]+\.',['_' sprintf(['%0' num2str(num_figures) 'd'],ind_img) '\.']);
 
 result0 = open_batch_page(sid,'go_image',url_img,['Immagine<SP>' num2str(ind_img)],['Immagine ' num2str(ind_img)],{});
-if ( result0.err_code == 0 )
+flg_broken_image = ~isempty(regexp(result0.text,'width="92"','once')) && ~isempty(regexp(result0.text,'height="92"','once')); % image page is present, but a brogen image logo is shown instead (eg.: http://dl.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Avellino/Stato+civile+della+restaurazione/Caposele/Nati/1863/365/007850638_01845.jpg.html )
+if ( result0.err_code == 0 && ~flg_broken_image )
     % image was downloaded correctly
     result0 = iw('write_cmd',{sid,'run','iw/san/zoom_image',get_write_cmd_timeout(),struct()});
     if (result0.err_code ~= 0)
@@ -1204,7 +1205,7 @@ if ( result0.err_code == 0 )
         z = dir(img_file);
         flg_ok = (z(1).bytes > bytes_thr);
     end
-elseif ( result0.err_code == 2 )
+elseif ( result0.err_code == 2 || flg_broken_image )
     % image is missing from website (not a real download error)
     
     % create dummy file to mark the fact that image is not available
