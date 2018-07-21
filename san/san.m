@@ -542,7 +542,13 @@ if ( ~flg_fast_result )
             else
                 result0_text = result0.text; % !!! add error management here if text field is not present!!!
                 z = regexp(result0_text,'href="([^"]*)" class="last"','tokens');
-                url_imglast = z{1}{1}; % piece of anchor tag containing last image url
+                if isempty(z)
+                    % there is only one image, so the 'next' link is
+                    % missing (eg.http://dl.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Avellino/Stato+civile+italiano/Caposele/Matrimoni/1881/812/ )
+                    url_imglast = url_img1;
+                else
+                    url_imglast = z{1}{1}; % piece of anchor tag containing last image url
+                end
                 z2_last = regexp(url_imglast,'([0-9]+)_([0-9]+)\.jpg.html','tokens');
                 sub_batch_last  = z2_last{1}{1};
                 ks_num_img_last = z2_last{1}{2};
