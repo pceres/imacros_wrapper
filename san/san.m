@@ -1185,7 +1185,7 @@ function flg_ok = download_img(sid,ind_img,url_img,dnld_file,batch_folder,num_fi
 flg_ok = 0;
 
 bytes_thr = 3e5; % [bytes] min size to accept image as ok
-bytes_thr2 = 2.5e5; % last attempt for small images
+bytes_thr2 = 2.3e5; % last attempt for small images
 
 z = regexp(url_img,'[0-9_]*\.jpg','match');
 name_img = z{1}; % es. 005680090_00003.jpg
