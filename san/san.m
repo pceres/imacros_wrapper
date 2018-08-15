@@ -844,15 +844,9 @@ function result = open_batch_page(sid,imacro,url_batch,page_title,tag_batch,para
 % tag_batch     name of H1 html title in the page
 %
 % err_code:
-% 0: No error
+% 0: No error (additional field 'text' has to be added)
 % 1: Error opening the web page
 % 2: Image is missing from website
-
-% default return struct, in case it is not rewritten by the correct
-% return value for the downloaded page
-result = struct();
-result.err_code = 1;
-result.err_msg = 'Error opening the web page';
 
 max_count = 5;
 pause_repeated_failure = 10*50; % [s] pause after max_count failures
@@ -876,17 +870,21 @@ count = 0;
 while ancora
     result = iw('write_cmd',{sid,'run',['iw/san/' imacro],get_write_cmd_timeout(),struct('URL',url_batch,'TITLE',page_title)});
     result0 = iw('read_fdbk',{sid,''});
-    if result.err_code == 0
-        result.text = result0.text;
-        if isempty(regexp(result0.text,['<h1[^>]*class="title"[^>]*>' tag_batch0 '</h1>'], 'once'))
-            fprintf(1,'page not loaded correctly (tag %s not found)\n',tag_batch)
-            fprintf(1,'%d: %s\n',result.err_code,result.err_msg)
-            fprintf(1,'%d: %s\n',result0.err_code,result0.err_msg)
-            disp(result)
-            disp(result0)
-            %keyboard
+    if (result.err_code == 0)
+        if (result0.err_code ~= 0)
+            result.err_code = 1;
+            result.err_msg = 'Error opening the web page';
         else
-            ancora = check_page_text(imacro,result0.text,params);
+            result.text = result0.text;
+            if isempty(regexp(result0.text,['<h1[^>]*class="title"[^>]*>' tag_batch0 '</h1>'], 'once'))
+                fprintf(1,'page not loaded correctly (tag %s not found)\n',tag_batch)
+                fprintf(1,'%d: %s\n',result.err_code,result.err_msg)
+                fprintf(1,'%d: %s\n',result0.err_code,result0.err_msg)
+                disp(result)
+                disp(result0)
+            else
+                ancora = check_page_text(imacro,result0.text,params);
+            end
         end
     else
         % check if macro error was due to a missing image
