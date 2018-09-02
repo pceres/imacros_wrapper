@@ -1227,7 +1227,7 @@ function try_movefile = wait_for_downloaded_file(sid,dnld_file,bytes_thr,bytes_t
 
 try_movefile = 0;
 
-max_count = 5;
+max_count = 3;
 
 z = dir(dnld_file);
 count = 0;
@@ -1253,7 +1253,12 @@ if (count>=max_count)
     if ( isempty(z) || (z(1).bytes < bytes_thr2) )
         % still missing!
         if ~isempty(z)
-            fprintf(1,'    Apparently image has size %d, too little (min size is set at %d bytes)\n',z(1).bytes,bytes_thr)
+            if check_img(dnld_file)
+                try_movefile = 1;
+                fprintf(1,'    Image has size %d (too little: min size is set at %d bytes), but it is checked ok\n',z(1).bytes,bytes_thr)
+            else
+                fprintf(1,'    Apparently image has size %d, too little (min size is set at %d bytes)\n',z(1).bytes,bytes_thr)
+            end
         end
     else
         try_movefile = 1;
@@ -1390,3 +1395,19 @@ function sid = sid_default()
 % started. In case of single session, then, you can safely use this sid
 
 sid = '';
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function ok = check_img(dnld_file)
+% return ok if file is a correct image file, and it is not truncated (last
+% bytes missing)
+
+cmd = ['imginfo -f ' dnld_file];
+[retcode txt] = system(cmd);
+
+if regexp(txt,'Premature end','once')
+    ok = 0;
+else
+    ok = 1;
+end
