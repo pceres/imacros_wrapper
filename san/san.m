@@ -669,7 +669,7 @@ end
 %% check for dummy images
 v = diff(cell2mat(matr_img(:,1)));
 v_ = unique(v);
-if ( (length(v_)>1) || (v_(1) ~= 1) )
+if ( ~isempty(setdiff(v_,1)) ) % if there is a gap...
     % dummy images detected
     ind_gap = find(v~=1)+1;
     matr_dummy = matr_img(ind_gap,:);
