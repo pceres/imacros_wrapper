@@ -1182,7 +1182,7 @@ function flg_ok = download_img(sid,ind_img,url_img,dnld_file,batch_folder,num_fi
 
 flg_ok = 0;
 
-bytes_thr = 3e5; % [bytes] min size to accept image as ok
+bytes_thr = 2.5e5; % [bytes] min size to accept image as ok
 bytes_thr2 = 2.3e5; % last attempt for small images
 
 z = regexp(url_img,'[0-9_]*\.jpg','match');
@@ -1399,15 +1399,15 @@ sid = '';
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function ok = check_img(dnld_file)
+function [ok imginfo] = check_img(dnld_file)
 % return ok if file is a correct image file, and it is not truncated (last
 % bytes missing)
 
-cmd = ['imginfo -f ' dnld_file];
-[retcode txt] = system(cmd);
-
-if regexp(txt,'Premature end','once')
-    ok = 0;
-else
-    ok = 1;
+try
+    txt = evalc('imginfo = imfinfo(dnld_file);');
+    z=dir(dnld_file);
+    ok = ~isempty(z) && (z(1).bytes>0) && (imginfo.FileSize == z.bytes) && isempty(regexp(txt,'Warning','once')); %#ok<NODEF>
+catch %#ok<CTCH>
+    imginfo = struct([]);
+    ok=0;
 end
