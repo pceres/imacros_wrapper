@@ -1182,8 +1182,7 @@ function flg_ok = download_img(sid,ind_img,url_img,dnld_file,batch_folder,num_fi
 
 flg_ok = 0;
 
-bytes_thr = 2.5e5; % [bytes] min size to accept image as ok
-bytes_thr2 = 2.3e5; % last attempt for small images
+bytes_thr2 = 2.5e5; % [bytes] min size to accept image as ok
 
 z = regexp(url_img,'[0-9_]*\.jpg','match');
 name_img = z{1}; % es. 005680090_00003.jpg
@@ -1202,12 +1201,11 @@ if ( result0.err_code == 0 && ~flg_broken_image )
         fprintf(1,'%d: %s\n',result0.err_code,result0.err_msg)
     end
     
-    try_movefile = wait_for_downloaded_file(sid,dnld_file,bytes_thr,bytes_thr2);
+    try_movefile = wait_for_downloaded_file(sid,dnld_file,bytes_thr2);
     if try_movefile
         movefile(dnld_file,img_file);
         
-        z = dir(img_file);
-        flg_ok = (z(1).bytes > bytes_thr);
+        flg_ok = check_img(img_file);
     end
 elseif ( result0.err_code == 2 || flg_broken_image )
     % image is missing from website (not a real download error)
@@ -1223,18 +1221,16 @@ end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function try_movefile = wait_for_downloaded_file(sid,dnld_file,bytes_thr,bytes_thr2)
+function try_movefile = wait_for_downloaded_file(sid,dnld_file,bytes_thr2)
 
 try_movefile = 0;
 
 max_count = 3;
 
-z = dir(dnld_file);
 count = 0;
-while ( (isempty(z) || (z(1).bytes < bytes_thr)) && (count < max_count) )
+while ( ~check_img(dnld_file) && (count < max_count) )
     % file download not completed
     pause(1)
-    z = dir(dnld_file);
     count = count+1;
 end
 if (count>=max_count)
@@ -1250,17 +1246,19 @@ if (count>=max_count)
     end
     pause(20)
     z = dir(dnld_file);
-    if ( isempty(z) || (z(1).bytes < bytes_thr2) )
+    if ( ~check_img(dnld_file) )
         % still missing!
-        if ~isempty(z)
-            if check_img(dnld_file)
-                try_movefile = 1;
-                fprintf(1,'    Image has size %d (too little: min size is set at %d bytes), but it is checked ok\n',z(1).bytes,bytes_thr)
-            else
-                fprintf(1,'    Apparently image has size %d, too little (min size is set at %d bytes)\n',z(1).bytes,bytes_thr)
-            end
+        if ( z(1).bytes < bytes_thr2 )
+            try_movefile = 1;
+            fprintf(1,'    Image has size %d (too little: min size is set at %d bytes), but it is checked ok\n',z(1).bytes,bytes_thr2)
+        else
+            fprintf(1,'    Apparently image has size %d, too little (min size is set at %d bytes)\n',z(1).bytes,bytes_thr2)
         end
     else
+        % image ok
+        if ( z(1).bytes < bytes_thr2 )
+            fprintf(1,'    Image has size %d (too little: min size is set at %d bytes), but it is checked ok\n',z(1).bytes,bytes_thr2)
+        end
         try_movefile = 1;
     end
 else
