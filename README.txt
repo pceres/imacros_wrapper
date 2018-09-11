@@ -14,7 +14,7 @@ Instructions for set up:
 - the tool was tested with the following Firefox-iMacros combinations:
 	+ Windows 7: Firefox (version 56.0.1) & iMacros 8.9.7
 	+ Linux Slackware 14.2: Firefox (version 45.2.0) & iMacros 8.9.7
-- Load the files inside the iMacros Macro folder. They should appear in the iMacros toolbar in your browser (tested in Firefox).
+- Locate the iMacros root folder. Copy the files inside the iMacros Macro folder (iMacros_root/Macros). They should appear in the iMacros toolbar in your browser (tested in Firefox).
 - Run imacros_wrapper.js : an endless loop should start in the browser. 
   This means that the imacros_wrapper is ready to receive automation commands from the Matlab part of the tool.
 - Open Matlab, and add to the path the imacros Macro subfolder (where the iw.m file is located).
