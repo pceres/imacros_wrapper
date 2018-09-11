@@ -9,7 +9,7 @@ function result = iw(action,varargin)
 %       'grab_session' : detect available iMacros wrapper sessions, and lock one
 %                        No additional param needed.
 %                        Additional output fields:
-%                        'sid': detected session id strng (empty string is
+%                        'sid': detected session id string (empty string is
 %                               a valid sid), or '<error>' in case of error
 %       'release_session' : release the iMacros wrapper session
 %                           It must be followed by a cell array in the form
@@ -155,9 +155,7 @@ function result = iw(action,varargin)
 % total_cost_euro = v(4); total_value_euro = v(7);fprintf('\nTotal expense: %.2fE - Total value: %.2fE --> Earning: %.2fE - gain: %.0f%%\n',total_cost_euro,total_value_euro,total_value_euro-total_cost_euro,total_value_euro/total_cost_euro*100)
 %
 % %%% stop all current sessions
-% folder = '/home/ceres/iMacros/Downloads/';            % Windows
-% folder='D:\users\ceres\Documents\iMacros\Downloads\'; % Linux
-% 2,z=dir([folder 'lockfile*.txt']);for i_sid=1:length(z);name=z(i_sid).name;sid=strrep(strrep(name,'.txt',''),'lockfile','');result = iw('write_cmd',{sid,'stop'});filename=[folder name];if exist(filename,'file'),delete(filename),end, fprintf(1,'Stopped session "%s"\n',sid),end;delete([folder '*.*'])
+% 2,result = iw('iMacros_rootfolder',{});root_folder = result.folder;folder=[root_folder 'Downloads\'];z=dir([folder 'lockfile*.txt']);for i_sid=1:length(z);name=z(i_sid).name;sid=strrep(strrep(name,'.txt',''),'lockfile','');result = iw('write_cmd',{sid,'stop'});filename=[folder name];if exist(filename,'file'),delete(filename),end, fprintf(1,'Stopped session "%s"\n',sid),end; z2=dir(folder);for i_file=1:length(z);name=[folder z2(i_file).name];if ~z2(i_file).isdir,delete(filename),end,end
 %
 %
 % error codes for write_cmd action:

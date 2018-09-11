@@ -320,20 +320,26 @@ info_fullname = [webfolder_folder info_matfile];
 
 if ( isempty(matr_items) )
     result0 = open_batch_page(sid,'go_image',url_webfolder,tag_webfolder,tag_webfolder,{});
-    z = regexp(result0.text,'giTitle">[\r\n]+<a href="([^"]+?)"','tokens');
-    if isempty(z)
+    if (result0.err_code ~= 0)
+        % could not access url
         err_code = 3;
         err_msg  = sprintf('Error accessing url for webfolder %s: %s',tag_webfolder,url_webfolder);
     else
-        list_url = [z{:}]';
-        
-        z=regexp(result0.text,'giTitle">[\r\n].*?">[\r\n]+([^<]+)<','tokens');
-        list_items = [z{:}]';
-        
-        matr_items = [list_items list_url];
-        
-        % save detected info
-        save_webfolder_info(info_fullname,tag_webfolder,matr_items);
+        z = regexp(result0.text,'giTitle">[\r\n]+<a href="([^"]+?)"','tokens');
+        if isempty(z)
+            err_code = 3;
+            err_msg  = sprintf('Error accessing url for webfolder %s: %s',tag_webfolder,url_webfolder);
+        else
+            list_url = [z{:}]';
+            
+            z=regexp(result0.text,'giTitle">[\r\n].*?">[\r\n]+([^<]+)<','tokens');
+            list_items = [z{:}]';
+            
+            matr_items = [list_items list_url];
+            
+            % save detected info
+            save_webfolder_info(info_fullname,tag_webfolder,matr_items);
+        end
     end
 end
 

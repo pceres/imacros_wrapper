@@ -10,8 +10,9 @@ str_hours       = struct();
 matr_comm       = {};
 
 username = 'ceres'
-password = 'yv1moq!S'
-matr_comm = {'KIEC002_PERT_PWT',0.50;'KIGI004_PERT_PWT',0.30;'KIGI006_PERT_PWT',0.20}
+password = 'tdC1e!um'
+%matr_comm = {'KIEC002_PERT_PWT',0.50;'KIGI004_PERT_PWT',0.30;'KIGI006_PERT_PWT',0.20} % tutto il 2017
+matr_comm = {'KIEC002_PERT_PWT',1} % da gen 2017 a ...
 vec_target = datevec(now-7); % default date: point to 7 days ago (previous week)
 flg_force_loading = 1
 
