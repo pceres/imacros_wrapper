@@ -155,7 +155,7 @@ function result = iw(action,varargin)
 % total_cost_euro = v(4); total_value_euro = v(7);fprintf('\nTotal expense: %.2fE - Total value: %.2fE --> Earning: %.2fE - gain: %.0f%%\n',total_cost_euro,total_value_euro,total_value_euro-total_cost_euro,total_value_euro/total_cost_euro*100)
 %
 % %%% stop all current sessions
-% 2,result = iw('iMacros_rootfolder',{});root_folder = result.folder;folder=[root_folder 'Downloads\'];z=dir([folder 'lockfile*.txt']);for i_sid=1:length(z);name=z(i_sid).name;sid=strrep(strrep(name,'.txt',''),'lockfile','');result = iw('write_cmd',{sid,'stop'});filename=[folder name];if exist(filename,'file'),delete(filename),end, fprintf(1,'Stopped session "%s"\n',sid),end; z2=dir(folder);for i_file=1:length(z);name=[folder z2(i_file).name];if ~z2(i_file).isdir,delete(filename),end,end
+% 2,result = iw('iMacros_rootfolder',{});root_folder = result.folder;folder=[root_folder 'Downloads' filesep];z=dir([folder 'lockfile*.txt']);for i_sid=1:length(z);name=z(i_sid).name;sid=strrep(strrep(name,'.txt',''),'lockfile','');result = iw('write_cmd',{sid,'stop'});filename=[folder name];if exist(filename,'file'),delete(filename),end, fprintf(1,'Stopped session "%s"\n',sid),end; z2=dir(folder);for i_file=1:length(z);name=[folder z2(i_file).name];if ~z2(i_file).isdir,delete(filename),end,end
 %
 %
 % error codes for write_cmd action:
