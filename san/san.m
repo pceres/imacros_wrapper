@@ -1303,11 +1303,13 @@ tag = regexprep(tag,'\([^\)]*\)','');
 separators = '\s\,\+\(\)';
 if regexp(tag,['[' separators ']'])
     z = regexp(tag,['[^' separators ']+'],'match');
-    word1 = z{1};
-    word2 = z{2};
-    word1_ = [upper(word1(1)) word1(2:end)];
-    word2_ = [upper(word2(1)) word2(2:end)];
-    folder = [word1_ word2_];
+    % set uppercase for the first letter of each word
+    folder = '';
+    for i_word = 1:length(z)
+        word = z{i_word};
+        word_ = [upper(word(1)) lower(word(2:end))];
+        folder = [folder word_]; %#ok<AGROW>
+    end
 else
     folder = tag;
 end
