@@ -1300,7 +1300,7 @@ function folder = prepare_tag(tag)
 tag = regexprep(tag,'\([^\)]*\)','');
 
 % remove text in parenthesis
-separators = '\s\,\+\(\)';
+separators = '\s\,\+\(\)''';
 if regexp(tag,['[' separators ']'])
     z = regexp(tag,['[^' separators ']+'],'match');
     % set uppercase for the first letter of each word
