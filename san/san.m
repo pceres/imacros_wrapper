@@ -1248,7 +1248,7 @@ if (count>=max_count)
     z = dir(dnld_file);
     if ( ~check_img(dnld_file) )
         % still missing!
-        if ( z(1).bytes < bytes_thr2 )
+        if ( ~isempty(z) && (z(1).bytes < bytes_thr2) )
             try_movefile = 1;
             fprintf(1,'    Image has size %d (too little: min size is set at %d bytes), but it is checked ok\n',z(1).bytes,bytes_thr2)
         else
