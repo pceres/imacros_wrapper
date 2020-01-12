@@ -325,29 +325,52 @@ err_msg  = '';
 
 info_fullname = [webfolder_folder info_matfile];
 [temp matr_items] = load_webfolder_info(info_fullname,tag_webfolder); %#ok<ASGLU>
-
+    
 if ( isempty(matr_items) )
+
     result0 = open_batch_page(sid,'go_image',url_webfolder,tag_webfolder,tag_webfolder,{});
     if (result0.err_code ~= 0)
         % could not access url
         err_code = 3;
         err_msg  = sprintf('Error accessing url for webfolder %s: %s',tag_webfolder,url_webfolder);
     else
-        z = regexp(result0.text,'giTitle">[\r\n]+<a href="([^"]+?)"','tokens');
-        if isempty(z)
-            err_code = 3;
-            err_msg  = sprintf('Error accessing url for webfolder %s: %s',tag_webfolder,url_webfolder);
-        else
-            list_url = [z{:}]';
-            
-            z=regexp(result0.text,'giTitle">[\r\n].*?">[\r\n]+([^<]+)<','tokens');
-            list_items = [z{:}]';
-            
-            matr_items = [list_items list_url];
-            
-            % save detected info
-            save_webfolder_info(info_fullname,tag_webfolder,matr_items);
+        % find number of page for current url_webfolder (there could be
+        % multiple pages in there are man info)
+        num_pages = get_page_number(result0.text);
+        
+        matr_items = {};
+        for i_page = 1:num_pages
+            if i_page > 1
+                url_webfolder_i = [url_webfolder '?g2_page=' num2str(i_page)]; % i-th page
+                result0 = open_batch_page(sid,'go_image',url_webfolder_i,tag_webfolder,tag_webfolder,{});
+            else
+                % no need to reload the page, it was already loaded to detect
+                % the number of pages
+                result0.err_code = 0;
+            end
+            if (result0.err_code ~= 0)
+                % could not access url
+                err_code = 3;
+                err_msg  = sprintf('Error accessing url for webfolder %s: %s',tag_webfolder,url_webfolder);
+            else
+                
+                z = regexp(result0.text,'giTitle">[\r\n]+<a href="([^"]+?)"','tokens');
+                if isempty(z)
+                    err_code = 3;
+                    err_msg  = sprintf('Error accessing url for webfolder %s: %s',tag_webfolder,url_webfolder);
+                else
+                    list_url = [z{:}]';
+                    
+                    z=regexp(result0.text,'giTitle">[\r\n].*?">[\r\n]+([^<]+)<','tokens');
+                    list_items = [z{:}]';
+                    
+                    matr_items = [matr_items; list_items list_url]; %#ok<AGROW> % append data from page i_page
+                end
+            end
         end
+        
+        % save detected info
+        save_webfolder_info(info_fullname,tag_webfolder,matr_items);
     end
 end
 
@@ -358,6 +381,18 @@ result.matr_items       = matr_items;
 result.info_fullname    = info_fullname;
 result.url_webfolder    = url_webfolder;
 result.webfolder_folder = webfolder_folder;
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function num_pages = get_page_number(text)
+
+z = regexp(text,'Pagina:(.*?)</div>','tokens');
+if isempty(z)
+    num_pages = 1;
+else
+    num_pages = length(unique(regexp(z{1}{1},'[0-9]+','match')));
+end
 
 
 
@@ -967,6 +1002,12 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function list_multiple = check_multiple_images(list_stored,list_stored_filename,matr_img_to_dnld_ref,max_loop_count,flg_max_loop_count)
+% list_stored           : N x 1 vector of image ID's
+% list_stored_filename  : N x 1 vector of image filenames
+% matr_img_to_dnld_ref  : N x 2 cell array with lines of the type {image ID, image url}
+% max_loop_count        : integer indicating the max number of download attempts after which the flg_max_loop_count is set
+% flg_max_loop_count    : [0,1] flg indicating that even if there are duplicates, they are ok (duplication is in the source, 
+%                               it is not adownload error)
 
 list_multiple = {};
 
@@ -1117,12 +1158,14 @@ img_fingerprint = [img_size(1) img_size(2) sum(img_bitmap(:))];
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [matr_id list_stored list_stored_filename list_dummy_filename] = detect_images_to_download(folder_film,matr_id_ref)
+function [matr_id list_stored list_stored_filename list_dummy_filename list_skip] = detect_images_to_download(folder_film,matr_id_ref)
 % some batches have missing images (stored in list_dummy_filename), such as:
 %     Caposele_Nati_1827_988/	images 3 and 5
 %     Caposele_Nati_1829_990/   images 3 and 5
 %     Caposele_Nati_1851_1006/	images 2 and 4
 %     ...
+
+skipfile = '/home/ceres/Desktop/phpgedview/usbdisk_genealogia/RegistriAnagrafeCaposele/step13_san_CaposeleArchivioStatoAvellino/Caposele_Italia/img_rename_log.txt';
 
 list_id_ref = cell2mat(matr_id_ref(:,1));
 if ~exist(folder_film,'dir')
@@ -1132,6 +1175,7 @@ if ~exist(folder_film,'dir')
     list_stored_filename = {};
     list_dummy_filename = {};
 else
+     
     % dummy files to mark missing images
     z = dir([folder_film '*.jpg.missing.txt']);
     [list_dummy_filename{1:length(z)}] = deal(z.name);
@@ -1159,8 +1203,25 @@ else
         list_stored = []; % nothing already downloaded
     end
     
+    % detect images to be skipped (as indicated in skipfile)
+    z = dir(skipfile);
+    fid = fopen(skipfile, 'r');
+    text_skip = fread(fid, z(1).bytes, 'uint8=>char')';
+    fclose(fid);
+    list_skip = [];
+    for i_image = 1:size(matr_id_ref)
+        url_image_i = matr_id_ref{i_image,2};
+        if ~isempty(strfind(text_skip,url_image_i))
+            list_skip(end+1,1) = i_image; %#ok<AGROW>
+        end
+    end
+    if ~isempty(list_skip)
+        fprintf(1,'**** There are %d images to be skipped in the range %d-%d:\n',length(list_skip),min(list_skip),max(list_skip));
+    end
+        
     % calculate list of id to be downloaded
-    [list_id_ref_real ind] = setdiff(list_id_ref,list_dummy); % remove dummy images (not available)
+    list_no_download = union(list_dummy,list_skip);
+    [list_id_ref_real ind] = setdiff(list_id_ref,list_no_download); % remove dummy images (not available) or images to be skipped
     matr_id_ref_real = matr_id_ref(ind,:);
     [temp ind] = setdiff(list_id_ref_real,list_stored); %#ok<ASGLU> % remove already downloaded images
     matr_id = matr_id_ref_real(ind,:);
