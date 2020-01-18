@@ -6,15 +6,17 @@ function result = san(action,params)
 %
 % % download a complete batch (eg Caposele Nati 1818, busta 978)
 % result = san('dnld_batch',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/Nati/1818/978/','/home/ceres/StatoCivileSAN/Caposele_Restaurazione/','Caposele_Nati_1818_978','978'}) % plain batch
-% result = san('dnld_batch',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/Nati/1827/988/','/home/ceres/StatoCivileSAN/Caposele_Restaurazione/','Caposele_Nati_1827_988','988'}) % some images are not available (dummy images: 3, 5)
-% result = san('dnld_batch',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Valvaoggi+Salerno/Matrimoni+processetti/1855/6484/','/home/ceres/StatoCivileSAN/Valva_Restaurazione/','Valva_MatrimoniProcessetti_1855_6484','6484'}) % subbatch (first part of image name) is not the same for all batch images
+% result = san('dnld_batch',{'http://dl.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/Nati/1827/988/','/home/ceres/StatoCivileSAN/Caposele_Restaurazione/','Caposele_Nati_1827_988','988'}) % some images are not available (dummy images: 3, 5)
+% result = san('dnld_batch',{'http://dl.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Valvaoggi+Salerno/Matrimoni+processetti/1855/6484/','/home/ceres/StatoCivileSAN/Valva_Restaurazione/','Valva_MatrimoniProcessetti_1855_6484','6484'}) % subbatch (first part of image name) is not the same for all batch images
 %
 % % download a whole typology (eg Caposele Nati (all years) )
-% result = san('dnld_typology',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/Matrimoni+processetti/','/home/ceres/StatoCivileSAN/Caposele_Restaurazione/','Caposele_MatrimoniProcessetti','Matrimoni, processetti'})
+% result = san('dnld_typology',{'http://dl.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/Matrimoni+processetti/','/home/ceres/StatoCivileSAN/Caposele_Restaurazione/','Caposele_MatrimoniProcessetti','Matrimoni, processetti'})
 %
 % % download a whole town (eg Caposele (Nati, Morti, Matrimoni, etc.) )
-% result = san('dnld_town',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/','/home/ceres/StatoCivileSAN/Caposele_Restaurazione/','Caposele','Caposele(provincia di Avellino)'})
-% result = san('dnld_town',{'http://www.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+italiano/Castelnuovo+di+Conza/','/home/ceres/StatoCivileSAN/CastelnuovoDiConza_Italia/','CastelnuovoDiConza','Castelnuovo di Conza'})
+% result = san('dnld_town',{'http://dl.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Avellino/Stato+civile+italiano/Caposele/','/home/ceres/StatoCivileSAN/Caposele_Italia/','Caposele','Caposele'})
+% result = san('dnld_town',{'http://dl.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+della+restaurazione/Caposeleprovincia+di+Avellino/','/home/ceres/StatoCivileSAN/Caposele_Restaurazione/','Caposele','Caposele(provincia di Avellino)'})
+% result = san('dnld_town',{'http://dl.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Salerno/Stato+civile+italiano/Castelnuovo+di+Conza/','/home/ceres/StatoCivileSAN/CastelnuovoDiConza_Italia/','CastelnuovoDiConza','Castelnuovo di Conza'})
+% result = san('dnld_town',{'http://dl.antenati.san.beniculturali.it/v/Archivio+di+Stato+di+Avellino/Stato+civile+italiano/Bagnoli+Irpino/','/home/ceres/StatoCivileSAN/BagnoliIrpino_Italia/','BagnoliIrpino','Bagnoli Irpino'})
 %
 % % in case of error, run the following to release the iw session and allow a correct restart
 % result = iw('release_session',{''})
@@ -1165,7 +1167,34 @@ function [matr_id list_stored list_stored_filename list_dummy_filename list_skip
 %     Caposele_Nati_1851_1006/	images 2 and 4
 %     ...
 
-skipfile = '/home/ceres/Desktop/phpgedview/usbdisk_genealogia/RegistriAnagrafeCaposele/step13_san_CaposeleArchivioStatoAvellino/Caposele_Italia/img_rename_log.txt';
+global skipfile_str
+
+% folder_dst populated by the following script:
+% % folder_src = '/run/media/ceres/Elements/My Documents/genealogia/fonti/antenati_san_ArchivioDiStatoAvellino/';folder_dst='/home/ceres/StatoCivileSAN_index/';z=dir(folder_src);for i_dir = 3:length(z),tag=z(i_dir).name;folder_i=[folder_src tag filesep];z2=dir([folder_i 'info_town.mat']);fprintf(1,'%d: %s\n',length(z2),tag),mkdir([folder_dst tag]),copyfile([folder_i 'info_town.mat'],[folder_dst tag]);end
+z_dir = regexp(folder_film,'/','split');ks=sprintf('%s/',z_dir{1:4});
+skipfile = [ks(1:end-1) '_index' filesep z_dir{5} filesep 'info_town.mat'];
+
+if ~isempty(skipfile_str) && isequal(skipfile_str.dirinfo,dir(skipfile))
+    % retrieve var
+    list_to_be_skipped = skipfile_str.list_to_be_skipped;
+else
+    % first run, or file changed: load it
+
+    z=load(skipfile);
+    town = fieldnames(z.webfolder_info);
+    z2=[z.webfolder_info.(town{1}){:,3}];
+    z3={};for i_=1:length(z2),z3=[z3;z2(i_).matr_years];end %#ok<AGROW>
+    z4={};for i_=1:length(z3),z4=[z4;z3{i_,3}];end %#ok<AGROW>
+    z5=[z4{:,3}];
+    z6={};for i_ = 1:length(z5);z6=[z6;z5(i_).matr_stored];end %#ok<AGROW>
+    z7 = {};for i_ = 1:length(z6);z7=[z7;z6(i_,2)];end %#ok<AGROW>
+    list_to_be_skipped = z7;
+    
+    % store var
+    skipfile_str.list_to_be_skipped =  list_to_be_skipped;
+    skipfile_str.dirinfo   =  dir(skipfile);
+end
+
 
 list_id_ref = cell2mat(matr_id_ref(:,1));
 if ~exist(folder_film,'dir')
@@ -1204,19 +1233,9 @@ else
     end
     
     % detect images to be skipped (as indicated in skipfile)
-    z = dir(skipfile);
-    fid = fopen(skipfile, 'r');
-    text_skip = fread(fid, z(1).bytes, 'uint8=>char')';
-    fclose(fid);
-    list_skip = [];
-    for i_image = 1:size(matr_id_ref)
-        url_image_i = matr_id_ref{i_image,2};
-        if ~isempty(strfind(text_skip,url_image_i))
-            list_skip(end+1,1) = i_image; %#ok<AGROW>
-        end
-    end
+    [temp list_skip]=intersect(matr_id_ref(:,2),list_to_be_skipped);
     if ~isempty(list_skip)
-        fprintf(1,'**** There are %d images to be skipped in the range %d-%d:\n',length(list_skip),min(list_skip),max(list_skip));
+        fprintf(1,'\tThere are %d images to be skipped in the range %d-%d:\n',length(list_skip),min(list_skip),max(list_skip));
     end
         
     % calculate list of id to be downloaded
