@@ -259,10 +259,10 @@ else
         matr_img_to_dnld_ref = result0.matr_img; % matrix with list of all images in batch (numeric id in col1, url in col2)
         
         % detect images to be downloaded
-        [matr_img_to_dnld list_stored] = detect_images_to_download(batch_folder,matr_img_to_dnld_ref); %#ok<NASGU> list_stored s overwritten by download_batch_loop
+        [matr_img_to_dnld list_stored matr_stored_cumul] = detect_images_to_download(batch_folder,matr_img_to_dnld_ref); %#ok<NASGU> list_stored s overwritten by download_batch_loop
         
         % loop to download images in the batch
-        [list_stored list_stored_filename list_dummy_filename list_multiple] = download_batch_loop(sid,matr_img_to_dnld,matr_img_to_dnld_ref,batch_folder,num_figures);
+        [list_stored list_stored_filename list_dummy_filename list_multiple matr_stored_cumul] = download_batch_loop(sid,matr_img_to_dnld,matr_img_to_dnld_ref,batch_folder,num_figures);
         matr_stored = list_to_matr(matr_img_to_dnld_ref,list_stored);
         
         fprintf(1,'Batch %s was downloaded (%d images stored).\n',folder_batch,size(matr_stored,1));
@@ -274,6 +274,7 @@ else
         result_batch.list_stored_filename = list_stored_filename;   % filenames of downloaded images
         result_batch.list_dummy_filename = list_dummy_filename;     % filenames of missing images (not available in website)
         result_batch.list_multiple = list_multiple;   % multiple images in the batch (after repeated attempts to remove them)
+        result_batch.matr_stored_cumul  = matr_stored_cumul;  % matr of images downloaded in the past (col1: numeric id as shown in batch page, col2: url)
     end
 end
 
@@ -742,7 +743,7 @@ result.matr_img = matr_img; % each row has format {img_id, img_url}, with img_id
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [list_stored list_stored_filename list_dummy_filename list_multiple] = download_batch_loop(sid,matr_img_to_dnld,matr_img_to_dnld_ref,batch_folder,num_figures)
+function [list_stored list_stored_filename list_dummy_filename list_multiple matr_stored_cumul] = download_batch_loop(sid,matr_img_to_dnld,matr_img_to_dnld_ref,batch_folder,num_figures)
 
 max_img_retries = 3; % number of attempts to download an image
 max_loop_count  = 5; % after so many attempts, it could be a real duplicated image!
@@ -756,7 +757,7 @@ flg_max_loop_count = 0;
 flg_do_check = 1;
 if isempty(matr_img_to_dnld)
     % no other image to be downloaded
-    [temp, list_stored list_stored_filename list_dummy_filename] = detect_images_to_download(batch_folder,matr_img_to_dnld_ref); %#ok<ASGLU>
+    [temp, list_stored matr_stored_cumul list_stored_filename list_dummy_filename] = detect_images_to_download(batch_folder,matr_img_to_dnld_ref); %#ok<ASGLU>
     list_multiple = check_multiple_images(list_stored,list_stored_filename,matr_img_to_dnld_ref,max_loop_count,flg_max_loop_count);
     if isempty(list_multiple)
         flg_do_check = 0;
@@ -786,7 +787,7 @@ if flg_do_check
         end
         
         % check for wrong or multiple images
-        [matr_id_check list_stored list_stored_filename list_dummy_filename] = detect_images_to_download(batch_folder,matr_img_to_dnld_ref);
+        [matr_id_check list_stored matr_stored_cumul list_stored_filename list_dummy_filename] = detect_images_to_download(batch_folder,matr_img_to_dnld_ref);
         list_id_check = cell2mat(matr_id_check(:,1));
         list_multiple = check_multiple_images(list_stored,list_stored_filename,matr_img_to_dnld_ref,max_loop_count,flg_max_loop_count);
         flg_silent = 0;
@@ -1159,42 +1160,128 @@ img_fingerprint = [img_size(1) img_size(2) sum(img_bitmap(:))];
 
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function ind = get_ind_folder(ks_folder,list,type)
+
+switch type
+    case 'tag'
+        fcn = @prepare_tag;
+    case 'folder'
+        fcn = @prepare_folder;
+    otherwise
+        error('Unknown type %s!',type)
+end
+
+for i_=1:length(list)
+    list{i_}=upper(fcn(list{i_}));
+end
+ind = strmatch(upper(ks_folder),list,'exact');
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function matr_stored_cumul = parse_skipfile(skipfile,folder_film,flg_old)
+% this function returns a vertical cell array with the list of urls of
+% images that were already downloaded in the past, and so won't be
+% downloaded again
+
+global skipfile_str
+
+if flg_old
+    % look for old info_town.mat files, in a folder similar to the download
+    % one, but with _index postfix
+    skipfile = strrep(skipfile,'SAN/','SAN_index/'); % look for old info_town.mat in a different folder
+end
+
+if ~isempty(skipfile_str) && isequal(skipfile_str.dirinfo,dir(skipfile))
+    % retrieve var
+    webfolder_info     = skipfile_str.webfolder_info;
+else
+    % first run, or file changed: load it
+    z=load(skipfile);
+    webfolder_info = z.webfolder_info;
+    
+    % store vars
+    skipfile_str.webfolder_info     =  webfolder_info;
+    skipfile_str.dirinfo            =  dir(skipfile);
+end
+
+z=regexp(folder_film,'/','split');
+coords = regexp(z{end-1},'_','split');
+
+town        = coords{1};
+tipology    = coords{2};
+year        = coords{3};
+batch       = coords{4};
+
+if isfield(webfolder_info,town)
+    ind_typology = get_ind_folder(tipology,webfolder_info.(town)(:,1),'tag');
+%     list_typology = webfolder_info.(town)(:,1);
+%     for i_=1:length(list_typology),list_typology{i_}=prepare_tag(list_typology{i_});end
+%     ind_typology = strmatch(tipology,list_typology,'exact');
+    if ~isempty(ind_typology)
+        z3=webfolder_info.(town){ind_typology,3}.matr_years;
+        ind_year = get_ind_folder(year,z3(:,1),'folder');
+%         ind_year = strmatch(year,z3(:,1),'exact');
+        if ~isempty(ind_year)
+            %z4={};for i_=1:length(z3),z4=[z4;z3{i_,3}];end %#ok<AGROW>
+            z4 = z3{ind_year,3};
+            ind_batch = get_ind_folder(batch,z4(:,1),'folder');
+%             list_batch = z4(:,1);
+%             for i_=1:length(list_batch),list_batch{i_}=prepare_folder(list_batch{i_});end
+%             ind_batch = strmatch(batch,list_batch,'exact');
+            if ~isempty(ind_batch)
+                item = z4{ind_batch,3};
+                % in a clean run (and in the future), following line should be replaced by just: "field_matr = 'matr_img_to_dnld_ref'"
+                if isfield(item,'matr_stored_cumul'),field_matr = 'matr_stored_cumul';else field_matr = 'matr_stored';end % field_matr points to the field with all available images matr_img_to_dnld_ref. In a first version (there are old info_town.mat around) this field was not present, so we must revert to the matr_stored field, containing only images that were downloaded at previous step
+                z6=item.(field_matr);
+                matr_stored_cumul = z6;
+                fprintf(1,'%d images to be skipped for town %s (%s)\n',size(matr_stored_cumul,1),town,skipfile)
+            else
+                % missing batch
+                matr_stored_cumul = [];
+                fprintf(1,'*** Missing batch %s in previous download!\n',batch);
+            end
+        else
+            % missing year
+            matr_stored_cumul = [];
+            fprintf(1,'*** Missing year %s in previous download!\n',year);
+        end
+    else
+        % missing tipology
+        matr_stored_cumul = [];
+        fprintf(1,'*** Missing tipology %s in previous download!\n',tipology);
+    end
+else
+    % missing town
+    matr_stored_cumul = [];
+    fprintf(1,'*** Missing town %s in previous download!\n',town);
+end
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [matr_id list_stored list_stored_filename list_dummy_filename list_skip] = detect_images_to_download(folder_film,matr_id_ref)
+function [matr_id list_stored matr_stored_cumul list_stored_filename list_dummy_filename list_skip] = detect_images_to_download(folder_film,matr_id_ref)
 % some batches have missing images (stored in list_dummy_filename), such as:
 %     Caposele_Nati_1827_988/	images 3 and 5
 %     Caposele_Nati_1829_990/   images 3 and 5
 %     Caposele_Nati_1851_1006/	images 2 and 4
 %     ...
 
-global skipfile_str
+% flg_old must be set only in case of a skipfile (info_town.mat) that was created
+% with the old script, without the field matr_stored_cumul (cumulative list
+% of downloaded images). In this case, the matr_stored field (images
+% downloaded in the last download only) is used
+flg_old = 1
 
 % folder_dst populated by the following script:
 % % folder_src = '/run/media/ceres/Elements/My Documents/genealogia/fonti/antenati_san_ArchivioDiStatoAvellino/';folder_dst='/home/ceres/StatoCivileSAN_index/';z=dir(folder_src);for i_dir = 3:length(z),tag=z(i_dir).name;folder_i=[folder_src tag filesep];z2=dir([folder_i 'info_town.mat']);fprintf(1,'%d: %s\n',length(z2),tag),mkdir([folder_dst tag]),copyfile([folder_i 'info_town.mat'],[folder_dst tag]);end
 z_dir = regexp(folder_film,'/','split');ks=sprintf('%s/',z_dir{1:4});
-skipfile = [ks(1:end-1) '_index' filesep z_dir{5} filesep 'info_town.mat'];
+skipfile = [ks(1:end-1) filesep z_dir{5} filesep 'info_town.mat'];
+%skipfile = [ks(1:end-1) filesep z_dir{5} filesep 'info_town.mat'];
 
-if ~isempty(skipfile_str) && isequal(skipfile_str.dirinfo,dir(skipfile))
-    % retrieve var
-    list_to_be_skipped = skipfile_str.list_to_be_skipped;
-else
-    % first run, or file changed: load it
-
-    z=load(skipfile);
-    town = fieldnames(z.webfolder_info);
-    z2=[z.webfolder_info.(town{1}){:,3}];
-    z3={};for i_=1:length(z2),z3=[z3;z2(i_).matr_years];end %#ok<AGROW>
-    z4={};for i_=1:length(z3),z4=[z4;z3{i_,3}];end %#ok<AGROW>
-    z5=[z4{:,3}];
-    z6={};for i_ = 1:length(z5);z6=[z6;z5(i_).matr_stored];end %#ok<AGROW>
-    z7 = {};for i_ = 1:length(z6);z7=[z7;z6(i_,2)];end %#ok<AGROW>
-    list_to_be_skipped = z7;
-    
-    % store var
-    skipfile_str.list_to_be_skipped =  list_to_be_skipped;
-    skipfile_str.dirinfo   =  dir(skipfile);
-end
-
+% read skipfile info and create a list of images to be skipped because they
+% were already downloaded in the past
+matr_stored_cumul = parse_skipfile(skipfile,folder_film,flg_old);
 
 list_id_ref = cell2mat(matr_id_ref(:,1));
 if ~exist(folder_film,'dir')
@@ -1204,7 +1291,6 @@ if ~exist(folder_film,'dir')
     list_stored_filename = {};
     list_dummy_filename = {};
 else
-     
     % dummy files to mark missing images
     z = dir([folder_film '*.jpg.missing.txt']);
     [list_dummy_filename{1:length(z)}] = deal(z.name);
@@ -1231,11 +1317,20 @@ else
     else
         list_stored = []; % nothing already downloaded
     end
+
+    if ~isempty(matr_stored_cumul)
+        list_stored_cumul = cell2mat(matr_stored_cumul(:,1));
+    else
+        list_stored_cumul = [];
+    end
+    list_stored_cumul = union(list_stored_cumul,list_stored); % cumulative list of downloaded images, needed to allow more than just 2 download runs
+    [temp temp ind_] = intersect(list_stored_cumul,cell2mat(matr_id_ref(:,1)));
+    matr_stored_cumul = matr_id_ref(ind_,:); % these images were downloaded in past downloads
     
     % detect images to be skipped (as indicated in skipfile)
-    [temp list_skip]=intersect(matr_id_ref(:,2),list_to_be_skipped);
+    [temp list_skip]=intersect(matr_id_ref(:,2),matr_stored_cumul(:,2));
     if ~isempty(list_skip)
-        fprintf(1,'\tThere are %d images to be skipped in the range %d-%d:\n',length(list_skip),min(list_skip),max(list_skip));
+        fprintf(1,'\tThere are %d images already downloaded in the past in the range %d-%d:\n',length(list_skip),min(list_skip),max(list_skip));
     end
         
     % calculate list of id to be downloaded
@@ -1245,7 +1340,8 @@ else
     [temp ind] = setdiff(list_id_ref_real,list_stored); %#ok<ASGLU> % remove already downloaded images
     matr_id = matr_id_ref_real(ind,:);
     
-    list_unexpected_id = setdiff(list_stored,list_id_ref_real); % images that are downloaded, but exceed the number of images in the batch!
+    list_id_ref_downloadable = setdiff(list_id_ref,list_dummy); % remove dummy images (not available) only, as I want a list of all expected images
+    list_unexpected_id = setdiff(list_stored,list_id_ref_downloadable); % images that are downloaded, but exceed the number of images in the batch!
     if ~isempty(list_unexpected_id)
         fprintf(1,'**** There are unexpected images!!!\n');
         disp(list_unexpected_id)
