@@ -1215,20 +1215,18 @@ batch       = coords{4};
 
 if isfield(webfolder_info,town)
     ind_typology = get_ind_folder(tipology,webfolder_info.(town)(:,1),'tag');
-%     list_typology = webfolder_info.(town)(:,1);
-%     for i_=1:length(list_typology),list_typology{i_}=prepare_tag(list_typology{i_});end
-%     ind_typology = strmatch(tipology,list_typology,'exact');
     if ~isempty(ind_typology)
-        z3=webfolder_info.(town){ind_typology,3}.matr_years;
-        ind_year = get_ind_folder(year,z3(:,1),'folder');
-%         ind_year = strmatch(year,z3(:,1),'exact');
+        arr_town = webfolder_info.(town);
+        if (size(arr_town,2)==3) && ~isempty(arr_town{ind_typology,3})
+            z3=arr_town{ind_typology,3}.matr_years;
+            ind_year = get_ind_folder(year,z3(:,1),'folder');
+        else
+            % missing year in previous download
+            ind_year = [];
+        end
         if ~isempty(ind_year)
-            %z4={};for i_=1:length(z3),z4=[z4;z3{i_,3}];end %#ok<AGROW>
             z4 = z3{ind_year,3};
             ind_batch = get_ind_folder(batch,z4(:,1),'folder');
-%             list_batch = z4(:,1);
-%             for i_=1:length(list_batch),list_batch{i_}=prepare_folder(list_batch{i_});end
-%             ind_batch = strmatch(batch,list_batch,'exact');
             if ~isempty(ind_batch)
                 item = z4{ind_batch,3};
                 % in a clean run (and in the future), following line should be replaced by just: "field_matr = 'matr_img_to_dnld_ref'"
@@ -1244,7 +1242,7 @@ if isfield(webfolder_info,town)
         else
             % missing year
             matr_stored_cumul = [];
-            fprintf(1,'*** Missing year %s in previous download!\n',year);
+            fprintf(1,'+++ Missing year %s in previous download!\n',year);
         end
     else
         % missing tipology
@@ -1255,6 +1253,7 @@ else
     % missing town
     matr_stored_cumul = [];
     fprintf(1,'*** Missing town %s in previous download!\n',town);
+    keyboard % !!! shold not arrive here, but if it hapens, better to stop the flow and check
 end
 
 
@@ -1273,7 +1272,7 @@ function [matr_id list_stored matr_stored_cumul list_stored_filename list_dummy_
 % downloaded in the last download only) is used
 flg_old = 1
 
-% folder_dst populated by the following script:
+% folder_dst populated by the following script (folder_dst must end by SAN_index):
 % % folder_src = '/run/media/ceres/Elements/My Documents/genealogia/fonti/antenati_san_ArchivioDiStatoAvellino/';folder_dst='/home/ceres/StatoCivileSAN_index/';z=dir(folder_src);for i_dir = 3:length(z),tag=z(i_dir).name;folder_i=[folder_src tag filesep];z2=dir([folder_i 'info_town.mat']);fprintf(1,'%d: %s\n',length(z2),tag),mkdir([folder_dst tag]),copyfile([folder_i 'info_town.mat'],[folder_dst tag]);end
 z_dir = regexp(folder_film,'/','split');ks=sprintf('%s/',z_dir{1:4});
 skipfile = [ks(1:end-1) filesep z_dir{5} filesep 'info_town.mat'];
@@ -1379,7 +1378,13 @@ if ( result0.err_code == 0 && ~flg_broken_image )
     
     try_movefile = wait_for_downloaded_file(sid,dnld_file,bytes_thr2);
     if try_movefile
+        try
         movefile(dnld_file,img_file);
+        catch
+            % should not be here: to be checked if file exists, and why
+            % flow got here
+            keyboard
+        end
         
         flg_ok = check_img(img_file);
     end
