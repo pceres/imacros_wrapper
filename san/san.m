@@ -1161,21 +1161,30 @@ img_fingerprint = [img_size(1) img_size(2) sum(img_bitmap(:))];
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function ind = get_ind_folder(ks_folder,list,type)
+function ind = get_ind_folder(ks_folder,matr,type)
 
-switch type
-    case 'tag'
-        fcn = @prepare_tag;
-    case 'folder'
-        fcn = @prepare_folder;
-    otherwise
-        error('Unknown type %s!',type)
+if ~isempty(matr)
+    list = matr(:,1); % work on first column
+    
+    switch type
+        case 'tag'
+            fcn = @prepare_tag;
+        case 'folder'
+            fcn = @prepare_folder;
+        otherwise
+            error('Unknown type %s!',type)
+    end
+    
+    for i_=1:length(list)
+        list{i_}=upper(fcn(list{i_}));
+    end
+    ind = strmatch(upper(ks_folder),list,'exact');
+    
+else
+    % if empty matrix, then consider the item as not found
+    ind = [];
 end
 
-for i_=1:length(list)
-    list{i_}=upper(fcn(list{i_}));
-end
-ind = strmatch(upper(ks_folder),list,'exact');
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1214,19 +1223,19 @@ year        = coords{3};
 batch       = coords{4};
 
 if isfield(webfolder_info,town)
-    ind_typology = get_ind_folder(tipology,webfolder_info.(town)(:,1),'tag');
+    ind_typology = get_ind_folder(tipology,webfolder_info.(town),'tag');
     if ~isempty(ind_typology)
         arr_town = webfolder_info.(town);
         if (size(arr_town,2)==3) && ~isempty(arr_town{ind_typology,3})
             z3=arr_town{ind_typology,3}.matr_years;
-            ind_year = get_ind_folder(year,z3(:,1),'folder');
+            ind_year = get_ind_folder(year,z3,'folder');
         else
             % missing year in previous download
             ind_year = [];
         end
         if ~isempty(ind_year)
             z4 = z3{ind_year,3};
-            ind_batch = get_ind_folder(batch,z4(:,1),'folder');
+            ind_batch = get_ind_folder(batch,z4,'folder');
             if ~isempty(ind_batch)
                 item = z4{ind_batch,3};
                 % in a clean run (and in the future), following line should be replaced by just: "field_matr = 'matr_img_to_dnld_ref'"
