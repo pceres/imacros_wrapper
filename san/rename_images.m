@@ -53,17 +53,19 @@ for i_typology = 1:size(matr_files,1)
             batch_fullfolder = batch_info.batch_folder; % es. '/home/ceres/StatoCivileSAN/Caposele_Napoleonico/Caposele_Nati_1815_975/'
             url_batch    = batch_info.url_batch;
             matr_stored  = batch_info.matr_stored;
+            matr_stored  = batch_info.matr_stored;
             list_stored_filename = batch_info.list_stored_filename;
-            list_dummy_filename  = batch_info.list_dummy_filename;
+            matr_stored_cumul  = batch_info.matr_stored_cumul;
             
             batch_folder = remove_path(batch_fullfolder);
             
             text_log = sprintf('%s\n*** %s - %s - %s - %s\n',text_log,town,typology_caption,year_caption,batch_caption);
             
             batch_fullpath = [src_folder filesep batch_folder];
-            ext = analise_batch(batch_folder,batch_fullpath,list_stored_filename);
+            ext = analise_batch(batch_folder,batch_fullpath,list_stored_filename,matr_stored_cumul);
             list_stored_filename_new = {};
             for i_img = 1:size(matr_stored,1)
+                % for every downloaded image...
                 img_id       = matr_stored{i_img,1};
                 img_url      = matr_stored{i_img,2};
                 img_fullname = list_stored_filename{i_img};
@@ -88,9 +90,11 @@ for i_typology = 1:size(matr_files,1)
                 count = count+1;
                 text_log = sprintf('%s%3d) %20s -> %s  -  %s\n',text_log,img_id,img_filename,img_filename_new,img_url);
             end
-            ks_img_first = sprintf('DD MMM %s\t%s',year_caption,list_stored_filename_new{1});
-            ks_img_last  = sprintf('DD MMM %s\t%s',year_caption,list_stored_filename_new{end});
-            text_analisi = sprintf('%s\n%s\n%s\n%s\n',text_analisi,typology_caption,ks_img_first,ks_img_last);
+            if ~isempty(list_stored_filename_new)
+                ks_img_first = sprintf('DD MMM %s\t%s',year_caption,list_stored_filename_new{1});
+                ks_img_last  = sprintf('DD MMM %s\t%s',year_caption,list_stored_filename_new{end});
+                text_analisi = sprintf('%s\n%s\n%s\n%s\n',text_analisi,typology_caption,ks_img_first,ks_img_last);
+            end
         end
     end
 end
@@ -125,31 +129,40 @@ end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [ext flg_ok] = analise_batch(batch_folder,batch_fullpath,list_stored_filename)
+function [ext flg_ok] = analise_batch(batch_folder,batch_fullpath,list_stored_filename,matr_stored_cumul)
 
 flg_ok = 1;
 
 z=regexp(list_stored_filename,'[^/]+$','match');
 list_expected = [z{:}]';
 
-[temp temp ext] = fileparts(list_expected{1});
-
-z=dir([batch_fullpath filesep '*' ext]);
-[list_actual{1:length(z),1}] = deal(z.name);
-
-list_missing    = setdiff(list_expected,list_actual);
-list_unexpected = setdiff(list_actual,list_expected);
-
-if ~isempty(list_missing)
-    flg_ok = 0;
-    fprintf(1,'*** WARNING: following files are missing (%s):\n',batch_folder);
-    disp(list_missing);
-end
-
-if ~isempty(list_unexpected)
-    flg_ok = 0;
-    fprintf(1,'*** WARNING: following files are unexpected (%s):\n',batch_folder);
-    disp(list_unexpected);
+if ( isempty(list_expected) && ~isempty(matr_stored_cumul) )
+    % batch was already downloaded in the past, so it was not downloaded
+    % this time (list_stored_filename is empty)
+    ext = '';
+    flg_ok = 1;
+else
+    % some images were downloaded, check that all expected ones are present
+    % in the folder
+    [temp temp ext] = fileparts(list_expected{1});
+    
+    z=dir([batch_fullpath filesep '*' ext]);
+    [list_actual{1:length(z),1}] = deal(z.name);
+    
+    list_missing    = setdiff(list_expected,list_actual);
+    list_unexpected = setdiff(list_actual,list_expected);
+    
+    if ~isempty(list_missing)
+        flg_ok = 0;
+        fprintf(1,'*** WARNING: following files are missing (%s):\n',batch_folder);
+        disp(list_missing);
+    end
+    
+    if ~isempty(list_unexpected)
+        flg_ok = 0;
+        fprintf(1,'*** WARNING: following files are unexpected (%s):\n',batch_folder);
+        disp(list_unexpected);
+    end
 end
 
 if ~flg_ok

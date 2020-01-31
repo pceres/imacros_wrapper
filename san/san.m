@@ -1262,7 +1262,7 @@ else
     % missing town
     matr_stored_cumul = [];
     fprintf(1,'*** Missing town %s in previous download!\n',town);
-    keyboard % !!! shold not arrive here, but if it hapens, better to stop the flow and check
+    keyboard % !!! shold not arrive here, but if it happens, due to a past wrong download, better to stop the flow and check
 end
 
 
@@ -1387,14 +1387,9 @@ if ( result0.err_code == 0 && ~flg_broken_image )
     
     try_movefile = wait_for_downloaded_file(sid,dnld_file,bytes_thr2);
     if try_movefile
-        try
-        movefile(dnld_file,img_file);
-        catch
-            % should not be here: to be checked if file exists, and why
-            % flow got here
-            keyboard
+        if exist(dnld_file,'file')
+            movefile(dnld_file,img_file);
         end
-        
         flg_ok = check_img(img_file);
     end
 elseif ( result0.err_code == 2 || flg_broken_image )
